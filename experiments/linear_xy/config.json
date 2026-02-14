@@ -1,0 +1,22 @@
+{
+  "task": "linear_xy",
+  "adapter": "linear_xy",
+  "model": "linear_dynamics",
+  "paths": {
+    "train_csv": "experiments/linear_xy/data/train.csv",
+    "infer_csv": "experiments/linear_xy/data/infer.csv",
+    "predictions_csv": "experiments/linear_xy/output/predictions.csv",
+    "eval_report_csv": "experiments/linear_xy/output/eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "eval_policy": {
+    "val_mae_max": 0.01,
+    "val_rmse_max": 0.01,
+    "val_maxae_max": 0.02
+  }
+}

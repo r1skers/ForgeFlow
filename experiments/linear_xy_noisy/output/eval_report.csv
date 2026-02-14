@@ -1,0 +1,2 @@
+task,train_samples,val_samples,train_mae,val_mae,val_rmse,val_maxae,val_mae_max,val_rmse_max,val_maxae_max,status
+linear_xy_noisy,16,4,0.274853,0.228456,0.297329,0.505735,0.500000,0.600000,0.800000,PASS

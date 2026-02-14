@@ -1,18 +1,22 @@
+import argparse
 from pathlib import Path
 
-from forgeflow.metrics.csv_in import read_csv_records
-from processors import show
+from forgeflow.core.runner import run_pipeline
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="ForgeFlow framework runner")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("experiments/linear_xy/config.json"),
+        help="Path to runtime configuration file (JSON).",
+    )
+    return parser
+
 
 if __name__ == "__main__":
-    # Default to repository sample data for quick local runs.
-    default_csv = Path(__file__).parent / "forgeflow" / "Input" / "test" / "test.csv"
-    records, stats = read_csv_records(default_csv)
-
-    # Stage 1 output: structured records.
-    for record in records:
-        show(record)
-
-    # Stage 1 quality gate: row-level ingestion stats.
-    print(f"[csv] total_data_rows={stats['total_data_rows']}")
-    print(f"[csv] valid_rows={stats['valid_rows']}")
-    print(f"[csv] skipped_bad_rows={stats['skipped_bad_rows']}")
+    project_root = Path(__file__).parent
+    args = build_arg_parser().parse_args()
+    config_path = args.config if args.config.is_absolute() else project_root / args.config
+    run_pipeline(config_path, project_root)

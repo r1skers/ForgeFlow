@@ -1,2 +1,0 @@
-task,split_shuffle,split_seed,train_samples,val_samples,train_mae,val_mae,val_rmse,val_maxae,val_mae_max,val_rmse_max,val_maxae_max,status
-solar_terms_baseline,True,42,88,22,2.175189,2.561427,3.049444,5.500000,2.500000,3.000000,5.000000,FAIL

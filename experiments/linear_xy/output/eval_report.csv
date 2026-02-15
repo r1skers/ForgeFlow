@@ -1,2 +1,0 @@
-task,split_shuffle,split_seed,train_samples,val_samples,train_mae,val_mae,val_rmse,val_maxae,val_mae_max,val_rmse_max,val_maxae_max,status
-linear_xy,False,42,8,2,0.000000,0.000000,0.000000,0.000000,0.010000,0.010000,0.020000,PASS

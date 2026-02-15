@@ -1,66 +1,91 @@
 # ForgeFlow
 
-ForgeFlow v1 is a reproducible modeling-and-inference framework with pluggable adapters and models.
+ForgeFlow v1 is landed.
+It provides a reusable training-evaluation-inference framework, and has been validated with linear and polynomial-linear modeling tasks end to end.
 
-## v1 Scope
+## v1 Capabilities
 
-- Config-driven pipeline execution (`--config`)
-- Pluggable adapter/model architecture
+- Config-driven pipeline execution (`python main.py --config ...`)
+- Pluggable `Adapter` and `Model` architecture
 - Regression evaluation (`MAE`, `RMSE`, `MaxAE`) with `PASS/FAIL`
-- Residual anomaly flagging (3-sigma rule)
-- Example experiment bundles:
-  - `experiments/linear_xy`
-  - `experiments/linear_xy_noisy`
+- Residual anomaly flagging via sigma rule
+- Deterministic split controls (`shuffle`, `seed`) for reproducibility
+- Chunked inference (`infer.chunk_size`) for large CSV files
 
-## Architecture
+## Repository Layout
 
-- `forgeflow/core/`
-  - Runtime engine: config loading, IO, split, evaluation, pipeline runner
-- `forgeflow/interfaces/`
-  - Adapter/model contracts and shared typed structures
-- `forgeflow/plugins/`
-  - Concrete implementations selected at runtime (adapter/model registry)
-- `experiments/<task>/`
-  - `config.json`, `data/`, `output/` owned by each experiment
+- `forgeflow/core/`: runtime config, CSV IO, data split, evaluation, pipeline runner
+- `forgeflow/interfaces/`: adapter/model contracts and shared types
+- `forgeflow/plugins/`: built-in adapters/models and optional registry entries
+- `ForgeFlowApps/`: app-level tasks (config, data, adapters, models, outputs)
+- `experiments/`: baseline experiment bundles kept for compatibility demos
 
-## Run
+## Config Styles
 
-Default experiment:
+Both styles are supported:
+
+- Registry-key style:
+  - `adapter`: plugin key in `forgeflow/plugins/registry.py`
+  - `model`: plugin key in `forgeflow/plugins/registry.py`
+- Class-path style (recommended for app isolation):
+  - `adapter_ref`: `package.module:ClassName`
+  - `model_ref`: `package.module:ClassName`
+
+## Quick Run
+
+Linear baseline:
 
 ```bash
-python main.py
+python main.py --config experiments/linear_xy/config.json
 ```
 
-Noisy experiment:
+Poly4 cubic app:
 
 ```bash
-python main.py --config experiments/linear_xy_noisy/config.json
+python main.py --config ForgeFlowApps/poly4_cubic/config/run.json
 ```
 
 ## Outputs
 
-Each experiment writes to its own `output/` directory:
+Each task writes:
 
 - `output/predictions.csv`
 - `output/eval_report.csv`
 
-`predictions.csv` includes:
+`predictions.csv` contains `y_pred`, and contains `residual`/`anomaly_flag` when labeled `y` is provided in inference input.
 
-- `x`
-- `y_pred`
-- `residual` (if inference input contains `y`)
-- `anomaly_flag` (if residual is available)
+## Add a New App Task
 
-## Extend
+1. Create `ForgeFlowApps/<task_name>/`.
+2. Prepare `config/run.json`, `data/processed/train.csv`, `data/infer/infer.csv`.
+3. Implement app adapter and model classes.
+4. Set `adapter_ref` and `model_ref` in config.
+5. Run `python main.py --config ForgeFlowApps/<task_name>/config/run.json`.
 
-To add a new domain task:
+## Commit Convention
 
-1. Add adapter/model plugin implementations in `forgeflow/plugins/`.
-2. Register them in `forgeflow/plugins/registry.py`.
-3. Create `experiments/<new_task>/config.json` + task data files.
-4. Run with `python main.py --config experiments/<new_task>/config.json`.
+Use one unified format:
 
-## Notes
+```text
+<type>(<scope>): <summary>
+```
 
-- v1 is focused on deterministic regression pipelines and tabular CSV inputs.
-- Neural network plugins and richer uncertainty methods are planned for later versions.
+Recommended `type` values:
+
+- `feat`: new feature
+- `fix`: bug fix
+- `refactor`: code restructure without behavior change
+- `perf`: performance improvement
+- `docs`: documentation change
+- `test`: test-related change
+- `chore`: maintenance tasks
+- `data`: dataset/config/output updates
+
+Examples:
+
+- `feat(core): support adapter_ref/model_ref dynamic loading`
+- `refactor(runner): switch to model-capability summary logging`
+- `data(poly4_cubic): add synthetic train and infer datasets`
+- `docs(readme): mark ForgeFlow v1 milestone`
+
+A reusable commit template is provided in `.gitmessage.txt`.

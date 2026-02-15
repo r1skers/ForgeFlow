@@ -1,0 +1,17 @@
+<type>(<scope>): <summary>
+
+# optional body (what changed / why):
+# - change 1
+# - change 2
+
+# optional footer:
+# Refs: <issue-or-task-id>
+
+# types:
+# feat | fix | refactor | perf | docs | test | chore | data
+
+# examples:
+# feat(core): support adapter_ref/model_ref dynamic loading
+# refactor(runner): switch to model-capability summary logging
+# data(poly4_cubic): add synthetic train and infer datasets
+# docs(readme): mark ForgeFlow v1 milestone

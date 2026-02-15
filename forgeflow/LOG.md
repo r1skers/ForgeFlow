@@ -1,6 +1,6 @@
 # ForgeFlow Log
 
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 ## 2026-02-11
 - Initialized project log file.
@@ -52,3 +52,15 @@ Last updated: 2026-02-14
 - Added compatibility forwarding in legacy `forgeflow/*` modules so previous imports continue to resolve to the new core implementation.
 - Legacy compatibility layer removed after validation; `forgeflow` now keeps only `core/interfaces/plugins` plus `LOG.md`.
 - Deleted obsolete files and cache artifacts (`processors.py`, old adapter/metrics/model/config/evaluation wrappers, and `__pycache__` outputs).
+
+## 2026-02-15
+- Added split reproducibility controls (`split.shuffle`, `split.seed`) and persisted them in evaluation reports for audit/replay.
+- Added chunked inference execution (`infer.chunk_size`) so large inference CSVs can be processed without loading everything into memory at once.
+- Improved runtime plugin loading: configs can now use direct class references via `adapter_ref` / `model_ref` (module path), while keeping backward compatibility with registry keys (`adapter` / `model`).
+- Updated runner logging to model-capability style output (`summary()` when available, fallback to coefficient shape preview) instead of hardcoded slope/intercept assumptions.
+- Added model summaries to built-in linear regressor and app polynomial regressor for consistent pipeline logs.
+- Confirmed backward compatibility by running both:
+  - `python main.py --config ForgeFlowApps/poly4_cubic/config/run.json`
+  - `python main.py --config experiments/linear_xy/config.json`
+- Stage assessment: framework is now suitable as a reusable "data -> adapter -> model -> eval -> infer -> report" baseline for new tasks.
+- Future direction note: for larger datasets and stronger nonlinear relations, keep current adapter/runner/eval flow and add a PyTorch-based model plugin as an optional model backend.

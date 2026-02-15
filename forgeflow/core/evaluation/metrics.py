@@ -1,4 +1,4 @@
-import math
+import numpy as np
 
 from forgeflow.interfaces import FeatureMatrix, RegressionMetrics
 
@@ -11,26 +11,22 @@ def compute_regression_metrics(
     if not y_true:
         raise ValueError("y_true and y_pred must contain at least one sample")
 
-    abs_errors: list[float] = []
-    squared_errors: list[float] = []
+    y_true_arr = np.asarray(y_true, dtype=float)
+    y_pred_arr = np.asarray(y_pred, dtype=float)
+    if y_true_arr.ndim != 2 or y_pred_arr.ndim != 2:
+        raise ValueError("y_true and y_pred must be 2D arrays")
+    if y_true_arr.shape[1] != y_pred_arr.shape[1]:
+        raise ValueError("target row and prediction row must have same width")
 
-    for true_row, pred_row in zip(y_true, y_pred):
-        if len(true_row) != len(pred_row):
-            raise ValueError("target row and prediction row must have same width")
+    errors = y_true_arr - y_pred_arr
+    abs_errors = np.abs(errors)
 
-        for true_value, pred_value in zip(true_row, pred_row):
-            error = float(true_value) - float(pred_value)
-            abs_errors.append(abs(error))
-            squared_errors.append(error * error)
-
-    n_values = len(abs_errors)
-    mae = sum(abs_errors) / n_values
-    mse = sum(squared_errors) / n_values
-    rmse = math.sqrt(mse)
-    maxae = max(abs_errors)
+    mae = float(np.mean(abs_errors))
+    rmse = float(np.sqrt(np.mean(np.square(errors))))
+    maxae = float(np.max(abs_errors))
 
     return {
-        "mae": float(mae),
-        "rmse": float(rmse),
-        "maxae": float(maxae),
+        "mae": mae,
+        "rmse": rmse,
+        "maxae": maxae,
     }

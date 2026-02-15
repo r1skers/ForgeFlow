@@ -9,10 +9,15 @@
     "eval_report_csv": "experiments/linear_xy_noisy/output/eval_report.csv"
   },
   "split": {
-    "train_ratio": 0.8
+    "train_ratio": 0.8,
+    "shuffle": false,
+    "seed": 42
   },
   "anomaly": {
     "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 10000
   },
   "eval_policy": {
     "val_mae_max": 0.5,

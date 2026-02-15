@@ -19,7 +19,8 @@ class LinearDynamicsRegressor:
             raise ValueError("x and y must contain at least one sample")
 
         x_design = np.hstack([x_arr, np.ones((x_arr.shape[0], 1), dtype=float)])
-        self._weights = np.linalg.pinv(x_design) @ y_arr
+        weights, *_ = np.linalg.lstsq(x_design, y_arr, rcond=None)
+        self._weights = weights
 
     def predict(self, x: FeatureMatrix) -> FeatureMatrix:
         if self._weights is None:

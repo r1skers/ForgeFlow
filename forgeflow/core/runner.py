@@ -1,46 +1,72 @@
 import csv
+import logging
+import time
 from pathlib import Path
 
-from forgeflow.core.config.runtime import RuntimeConfig, load_runtime_config
+from forgeflow.core.config.runtime import load_runtime_config
 from forgeflow.core.data.split import split_train_val
 from forgeflow.core.evaluation.anomaly import ResidualSigmaRule
 from forgeflow.core.evaluation.metrics import compute_regression_metrics
 from forgeflow.core.evaluation.policy import evaluate_pass_fail, get_eval_policy
-from forgeflow.core.io.csv_reader import read_csv_records
+from forgeflow.core.io.csv_reader import read_csv_records, read_csv_records_in_chunks
 from forgeflow.plugins.registry import ADAPTER_REGISTRY, MODEL_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 
 def run_pipeline(config_path: Path, project_root: Path) -> None:
-    runtime = load_runtime_config(config_path, project_root)
-    print(f"[config] file={config_path}")
+    timings: dict[str, float] = {}
+    pipeline_start = time.perf_counter()
+    stage_start = pipeline_start
 
+    runtime = load_runtime_config(config_path, project_root)
+    timings["config_ms"] = (time.perf_counter() - stage_start) * 1000.0
+    logger.info("[config] file=%s", config_path)
+
+    stage_start = time.perf_counter()
     adapter_cls = ADAPTER_REGISTRY.get(runtime.adapter)
     if adapter_cls is None:
         raise ValueError(f"unknown adapter: {runtime.adapter}")
     model_cls = MODEL_REGISTRY.get(runtime.model)
     if model_cls is None:
         raise ValueError(f"unknown model: {runtime.model}")
+    timings["registry_ms"] = (time.perf_counter() - stage_start) * 1000.0
 
+    stage_start = time.perf_counter()
     records, stats = read_csv_records(runtime.paths.train_csv)
     adapter = adapter_cls()
     states, adapter_stats = adapter.adapt_records(records)
     feature_matrix, feature_stats = adapter.build_feature_matrix(states)
     target_matrix, target_stats = adapter.build_target_matrix(states)
+    timings["train_data_ms"] = (time.perf_counter() - stage_start) * 1000.0
 
     if not feature_matrix or not target_matrix:
-        print(f"[demo:{adapter.name}] samples=0")
-        print(f"[demo:{adapter.name}] slope=nan")
-        print(f"[demo:{adapter.name}] intercept=nan")
-        print(f"[demo:{adapter.name}] train_mae=nan")
-        print(f"[demo:{adapter.name}] val_mae=nan")
-        print(f"[csv] valid_rows={stats['valid_rows']}")
-        print(f"[adapter:{adapter.name}] valid_states={adapter_stats['valid_states']}")
-        print(f"[features:{adapter.name}] valid_vectors={feature_stats['valid_vectors']}")
-        print(f"[targets:{adapter.name}] valid_vectors={target_stats['valid_vectors']}")
+        logger.info("[demo:%s] samples=0", adapter.name)
+        logger.info("[demo:%s] slope=nan", adapter.name)
+        logger.info("[demo:%s] intercept=nan", adapter.name)
+        logger.info("[demo:%s] train_mae=nan", adapter.name)
+        logger.info("[demo:%s] val_mae=nan", adapter.name)
+        logger.info("[csv] valid_rows=%s", stats["valid_rows"])
+        logger.info("[adapter:%s] valid_states=%s", adapter.name, adapter_stats["valid_states"])
+        logger.info("[features:%s] valid_vectors=%s", adapter.name, feature_stats["valid_vectors"])
+        logger.info("[targets:%s] valid_vectors=%s", adapter.name, target_stats["valid_vectors"])
+        timings["total_ms"] = (time.perf_counter() - pipeline_start) * 1000.0
+        logger.info(
+            "[timing] config_ms=%.2f registry_ms=%.2f train_data_ms=%.2f total_ms=%.2f",
+            timings["config_ms"],
+            timings["registry_ms"],
+            timings["train_data_ms"],
+            timings["total_ms"],
+        )
         return
 
+    stage_start = time.perf_counter()
     x_train, y_train, x_val, y_val, split_stats = split_train_val(
-        feature_matrix, target_matrix, train_ratio=runtime.train_ratio
+        feature_matrix,
+        target_matrix,
+        train_ratio=runtime.train_ratio,
+        shuffle=runtime.split_shuffle,
+        seed=runtime.split_seed,
     )
 
     model = model_cls()
@@ -56,26 +82,30 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
     eval_policy = get_eval_policy(runtime.task)
     eval_policy.update(runtime.eval_policy_override)
     eval_result = evaluate_pass_fail(val_metrics, eval_policy)
+    timings["train_eval_ms"] = (time.perf_counter() - stage_start) * 1000.0
 
     coefficients = model.coefficients()
     slope = coefficients[0][0]
     intercept = coefficients[-1][0]
 
-    print(f"[demo:{adapter.name}] samples={len(feature_matrix)}")
-    print(f"[demo:{adapter.name}] slope={slope:.6f}")
-    print(f"[demo:{adapter.name}] intercept={intercept:.6f}")
-    print(f"[demo:{adapter.name}] train_mae={train_metrics['mae']:.6f}")
-    print(f"[demo:{adapter.name}] val_mae={val_metrics['mae']:.6f}")
-    print(f"[demo:{adapter.name}] val_rmse={val_metrics['rmse']:.6f}")
-    print(f"[demo:{adapter.name}] val_maxae={val_metrics['maxae']:.6f}")
-    print(f"[eval] status={eval_result['status']}")
-    print(f"[anomaly] mu={anomaly_stats['mu']:.6f}")
-    print(f"[anomaly] sigma={anomaly_stats['sigma']:.6f}")
-    print(f"[anomaly] threshold={anomaly_stats['threshold']:.6f}")
-    print(f"[split] total_samples={split_stats['total_samples']}")
-    print(f"[split] train_samples={split_stats['train_samples']}")
-    print(f"[split] val_samples={split_stats['val_samples']}")
-    print(
+    logger.info("[demo:%s] samples=%s", adapter.name, len(feature_matrix))
+    logger.info("[demo:%s] slope=%.6f", adapter.name, slope)
+    logger.info("[demo:%s] intercept=%.6f", adapter.name, intercept)
+    logger.info("[demo:%s] train_mae=%.6f", adapter.name, train_metrics["mae"])
+    logger.info("[demo:%s] val_mae=%.6f", adapter.name, val_metrics["mae"])
+    logger.info("[demo:%s] val_rmse=%.6f", adapter.name, val_metrics["rmse"])
+    logger.info("[demo:%s] val_maxae=%.6f", adapter.name, val_metrics["maxae"])
+    logger.info("[eval] status=%s", eval_result["status"])
+    logger.info("[anomaly] mu=%.6f", anomaly_stats["mu"])
+    logger.info("[anomaly] sigma=%.6f", anomaly_stats["sigma"])
+    logger.info("[anomaly] threshold=%.6f", anomaly_stats["threshold"])
+    logger.info("[split] total_samples=%s", split_stats["total_samples"])
+    logger.info("[split] train_samples=%s", split_stats["train_samples"])
+    logger.info("[split] val_samples=%s", split_stats["val_samples"])
+    logger.info("[split] shuffle=%s", runtime.split_shuffle)
+    logger.info("[split] seed=%s", runtime.split_seed)
+    logger.info(
+        "%s",
         {
             "train_example": {
                 "x": x_train[0],
@@ -87,12 +117,21 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
                 "y_true": y_val[0],
                 "y_pred": val_predictions[0],
             },
-        }
+        },
     )
 
-    infer_records, infer_csv_stats = read_csv_records(runtime.paths.infer_csv)
-    infer_matrix, infer_stats = adapter.build_infer_feature_matrix(infer_records)
-    infer_predictions = model.predict(infer_matrix) if infer_matrix else []
+    stage_start = time.perf_counter()
+    infer_csv_stats = {
+        "total_data_rows": 0,
+        "valid_rows": 0,
+        "skipped_bad_rows": 0,
+    }
+    infer_stats = {
+        "total_states": 0,
+        "valid_vectors": 0,
+        "skipped_feature_rows": 0,
+        "n_features": len(getattr(adapter, "feature_names", ())),
+    }
     infer_scored_rows = 0
     infer_anomaly_rows = 0
 
@@ -100,35 +139,50 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
     with runtime.paths.predictions_csv.open("w", encoding="utf-8", newline="") as out_file:
         writer = csv.writer(out_file)
         writer.writerow(["x", "y_pred", "residual", "anomaly_flag"])
-        for record, feature_vector, prediction_vector in zip(
-            infer_records, infer_matrix, infer_predictions
+        for infer_records_chunk, chunk_csv_stats in read_csv_records_in_chunks(
+            runtime.paths.infer_csv, runtime.infer_chunk_size
         ):
-            y_pred = float(prediction_vector[0])
-            residual_cell = ""
-            anomaly_cell = ""
-            if "y" in record and record["y"] != "":
-                residual = float(record["y"]) - y_pred
-                is_anomaly = anomaly_detector.is_anomaly(residual)
-                residual_cell = f"{residual:.6f}"
-                anomaly_cell = "1" if is_anomaly else "0"
-                infer_scored_rows += 1
-                if is_anomaly:
-                    infer_anomaly_rows += 1
+            infer_csv_stats = chunk_csv_stats
+            infer_matrix, chunk_infer_stats = adapter.build_infer_feature_matrix(infer_records_chunk)
+            infer_stats["total_states"] += chunk_infer_stats["total_states"]
+            infer_stats["valid_vectors"] += chunk_infer_stats["valid_vectors"]
+            infer_stats["skipped_feature_rows"] += chunk_infer_stats["skipped_feature_rows"]
+            infer_stats["n_features"] = chunk_infer_stats["n_features"]
 
-            writer.writerow([feature_vector[0], y_pred, residual_cell, anomaly_cell])
+            infer_predictions = model.predict(infer_matrix) if infer_matrix else []
+            for record, feature_vector, prediction_vector in zip(
+                infer_records_chunk, infer_matrix, infer_predictions
+            ):
+                y_pred = float(prediction_vector[0])
+                residual_cell = ""
+                anomaly_cell = ""
+                if "y" in record and record["y"] != "":
+                    residual = float(record["y"]) - y_pred
+                    is_anomaly = anomaly_detector.is_anomaly(residual)
+                    residual_cell = f"{residual:.6f}"
+                    anomaly_cell = "1" if is_anomaly else "0"
+                    infer_scored_rows += 1
+                    if is_anomaly:
+                        infer_anomaly_rows += 1
 
-    print(f"[infer] input_rows={infer_csv_stats['valid_rows']}")
-    print(f"[infer] valid_vectors={infer_stats['valid_vectors']}")
-    print(f"[infer] scored_rows={infer_scored_rows}")
-    print(f"[infer] anomaly_rows={infer_anomaly_rows}")
-    print(f"[infer] output_file={runtime.paths.predictions_csv}")
+                writer.writerow([feature_vector[0], y_pred, residual_cell, anomaly_cell])
+    timings["infer_ms"] = (time.perf_counter() - stage_start) * 1000.0
 
+    logger.info("[infer] input_rows=%s", infer_csv_stats["valid_rows"])
+    logger.info("[infer] valid_vectors=%s", infer_stats["valid_vectors"])
+    logger.info("[infer] scored_rows=%s", infer_scored_rows)
+    logger.info("[infer] anomaly_rows=%s", infer_anomaly_rows)
+    logger.info("[infer] output_file=%s", runtime.paths.predictions_csv)
+
+    stage_start = time.perf_counter()
     runtime.paths.eval_report_csv.parent.mkdir(parents=True, exist_ok=True)
     with runtime.paths.eval_report_csv.open("w", encoding="utf-8", newline="") as eval_file:
         writer = csv.DictWriter(
             eval_file,
             fieldnames=[
                 "task",
+                "split_shuffle",
+                "split_seed",
                 "train_samples",
                 "val_samples",
                 "train_mae",
@@ -145,6 +199,8 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
         writer.writerow(
             {
                 "task": runtime.task,
+                "split_shuffle": str(runtime.split_shuffle),
+                "split_seed": "" if runtime.split_seed is None else str(runtime.split_seed),
                 "train_samples": split_stats["train_samples"],
                 "val_samples": split_stats["val_samples"],
                 "train_mae": f"{train_metrics['mae']:.6f}",
@@ -157,9 +213,24 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
                 "status": str(eval_result["status"]),
             }
         )
-    print(f"[eval] report_file={runtime.paths.eval_report_csv}")
+    timings["eval_report_ms"] = (time.perf_counter() - stage_start) * 1000.0
+    logger.info("[eval] report_file=%s", runtime.paths.eval_report_csv)
 
-    print(f"[csv] valid_rows={stats['valid_rows']}")
-    print(f"[adapter:{adapter.name}] valid_states={adapter_stats['valid_states']}")
-    print(f"[features:{adapter.name}] valid_vectors={feature_stats['valid_vectors']}")
-    print(f"[targets:{adapter.name}] valid_vectors={target_stats['valid_vectors']}")
+    logger.info("[csv] valid_rows=%s", stats["valid_rows"])
+    logger.info("[adapter:%s] valid_states=%s", adapter.name, adapter_stats["valid_states"])
+    logger.info("[features:%s] valid_vectors=%s", adapter.name, feature_stats["valid_vectors"])
+    logger.info("[targets:%s] valid_vectors=%s", adapter.name, target_stats["valid_vectors"])
+    timings["total_ms"] = (time.perf_counter() - pipeline_start) * 1000.0
+    logger.info(
+        (
+            "[timing] config_ms=%.2f registry_ms=%.2f train_data_ms=%.2f "
+            "train_eval_ms=%.2f infer_ms=%.2f eval_report_ms=%.2f total_ms=%.2f"
+        ),
+        timings["config_ms"],
+        timings["registry_ms"],
+        timings["train_data_ms"],
+        timings["train_eval_ms"],
+        timings["infer_ms"],
+        timings["eval_report_ms"],
+        timings["total_ms"],
+    )

@@ -1,0 +1,27 @@
+{
+  "task": "solar_terms_baseline",
+  "adapter": "solar_terms_v1",
+  "model": "solar_terms_offset_mean_v1",
+  "paths": {
+    "train_csv": "ForgeFlowApps/solar_terms/data/raw/beijing_mangzhong_2015_2025.csv",
+    "infer_csv": "ForgeFlowApps/solar_terms/data/raw/beijing_mangzhong_2015_2025.csv",
+    "predictions_csv": "ForgeFlowApps/solar_terms/output/predictions.csv",
+    "eval_report_csv": "ForgeFlowApps/solar_terms/output/eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": true,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 10000
+  },
+  "eval_policy": {
+    "val_mae_max": 2.5,
+    "val_rmse_max": 3.0,
+    "val_maxae_max": 5.0
+  }
+}

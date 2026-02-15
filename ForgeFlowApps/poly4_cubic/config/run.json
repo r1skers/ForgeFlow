@@ -1,0 +1,27 @@
+{
+  "task": "poly4_cubic",
+  "adapter_ref": "ForgeFlowApps.poly4_cubic.adapters.poly4_cubic_adapter:Poly4CubicAdapter",
+  "model_ref": "ForgeFlowApps.poly4_cubic.models.polynomial_linear:PolyLinearDeg3Regressor",
+  "paths": {
+    "train_csv": "ForgeFlowApps/poly4_cubic/data/processed/train.csv",
+    "infer_csv": "ForgeFlowApps/poly4_cubic/data/infer/infer.csv",
+    "predictions_csv": "ForgeFlowApps/poly4_cubic/output/predictions.csv",
+    "eval_report_csv": "ForgeFlowApps/poly4_cubic/output/eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": true,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 10000
+  },
+  "eval_policy": {
+    "val_mae_max": 0.001,
+    "val_rmse_max": 0.001,
+    "val_maxae_max": 0.005
+  }
+}

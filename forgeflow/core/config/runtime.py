@@ -16,8 +16,10 @@ class PathConfig:
 @dataclass(frozen=True)
 class RuntimeConfig:
     task: str
-    adapter: str
-    model: str
+    adapter: str | None
+    adapter_ref: str | None
+    model: str | None
+    model_ref: str | None
     paths: PathConfig
     train_ratio: float
     split_shuffle: bool
@@ -73,10 +75,26 @@ def load_runtime_config(config_path: Path, project_root: Path) -> RuntimeConfig:
         "val_maxae_max": float(eval_policy_payload.get("val_maxae_max", 0.2)),
     }
 
+    raw_adapter = payload.get("adapter")
+    raw_adapter_ref = payload.get("adapter_ref")
+    adapter = str(raw_adapter) if raw_adapter is not None else None
+    adapter_ref = str(raw_adapter_ref) if raw_adapter_ref is not None else None
+    if adapter is None and adapter_ref is None:
+        raise ValueError("config must provide either 'adapter' or 'adapter_ref'")
+
+    raw_model = payload.get("model")
+    raw_model_ref = payload.get("model_ref")
+    model = str(raw_model) if raw_model is not None else None
+    model_ref = str(raw_model_ref) if raw_model_ref is not None else None
+    if model is None and model_ref is None:
+        raise ValueError("config must provide either 'model' or 'model_ref'")
+
     return RuntimeConfig(
         task=str(payload["task"]),
-        adapter=str(payload["adapter"]),
-        model=str(payload["model"]),
+        adapter=adapter,
+        adapter_ref=adapter_ref,
+        model=model,
+        model_ref=model_ref,
         paths=PathConfig(
             train_csv=_resolve_path(project_root, str(paths_payload["train_csv"])),
             infer_csv=_resolve_path(project_root, str(paths_payload["infer_csv"])),

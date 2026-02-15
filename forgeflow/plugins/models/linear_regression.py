@@ -38,3 +38,11 @@ class LinearDynamicsRegressor:
         if self._weights is None:
             raise RuntimeError("model must be fitted before coefficients")
         return self._weights.tolist()
+
+    def summary(self) -> dict[str, int]:
+        if self._weights is None:
+            raise RuntimeError("model must be fitted before summary")
+        return {
+            "n_features": int(self._weights.shape[0] - 1),
+            "n_targets": int(self._weights.shape[1]),
+        }

@@ -35,10 +35,14 @@ def _resolve_adapter_class(runtime: RuntimeConfig) -> type:
         raise ValueError("adapter is not configured")
     from forgeflow.plugins.registry import ADAPTER_REGISTRY
 
-    adapter_cls = ADAPTER_REGISTRY.get(runtime.adapter)
-    if adapter_cls is None:
+    adapter_entry = ADAPTER_REGISTRY.get(runtime.adapter)
+    if adapter_entry is None:
         raise ValueError(f"unknown adapter: {runtime.adapter}")
-    return adapter_cls
+    if isinstance(adapter_entry, str):
+        return _load_class_from_ref(adapter_entry)
+    if isinstance(adapter_entry, type):
+        return adapter_entry
+    raise ValueError(f"invalid adapter registry entry type: {type(adapter_entry).__name__}")
 
 
 def _resolve_model_class(runtime: RuntimeConfig) -> type:
@@ -48,10 +52,14 @@ def _resolve_model_class(runtime: RuntimeConfig) -> type:
         raise ValueError("model is not configured")
     from forgeflow.plugins.registry import MODEL_REGISTRY
 
-    model_cls = MODEL_REGISTRY.get(runtime.model)
-    if model_cls is None:
+    model_entry = MODEL_REGISTRY.get(runtime.model)
+    if model_entry is None:
         raise ValueError(f"unknown model: {runtime.model}")
-    return model_cls
+    if isinstance(model_entry, str):
+        return _load_class_from_ref(model_entry)
+    if isinstance(model_entry, type):
+        return model_entry
+    raise ValueError(f"invalid model registry entry type: {type(model_entry).__name__}")
 
 
 def _format_model_summary(model: object) -> dict[str, str]:

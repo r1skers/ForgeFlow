@@ -100,3 +100,7 @@ Last updated: 2026-02-17
   - Made registry imports lazy in `_resolve_adapter_class` / `_resolve_model_class`.
   - Result: `mode=simulation` with `adapter_ref/model_ref` no longer eagerly imports supervised evaluation stack during runner module import.
 - Hardened `forgeflow/core/evaluation/__init__.py` with lazy exports (`__getattr__`) so importing the evaluation package no longer eagerly imports numpy-backed metrics.
+- Refactored `forgeflow/plugins/registry.py` to store lazy class references (`module:Class`) instead of eager class imports.
+- Updated runner registry resolution to load class references on demand, supporting both string and class entries.
+- Hardened `forgeflow/plugins/adapters/__init__.py` and `forgeflow/plugins/models/__init__.py` with lazy exports to avoid package-level eager imports.
+- Confirmed `mode=simulation` no longer imports numpy even when using registry-key config (`adapter=dem_grid`, `model=diffusion_explicit`).

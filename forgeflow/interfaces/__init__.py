@@ -1,5 +1,5 @@
-from forgeflow.interfaces.adapter import SupervisedAdapter, ensure_required_fields
-from forgeflow.interfaces.model import RegressionModel
+from forgeflow.interfaces.adapter import SimulationAdapter, SupervisedAdapter, ensure_required_fields
+from forgeflow.interfaces.model import RegressionModel, SimulatorModel
 from forgeflow.interfaces.types import (
     AdapterStats,
     CsvStats,
@@ -15,8 +15,10 @@ from forgeflow.interfaces.types import (
 
 __all__ = [
     "SupervisedAdapter",
+    "SimulationAdapter",
     "ensure_required_fields",
     "RegressionModel",
+    "SimulatorModel",
     "Record",
     "State",
     "FeatureVector",

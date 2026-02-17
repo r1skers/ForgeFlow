@@ -3,6 +3,7 @@ import importlib
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 from forgeflow.core.config.runtime import RuntimeConfig, load_runtime_config
 from forgeflow.core.data.split import split_train_val
@@ -81,32 +82,26 @@ def _format_model_summary(model: object) -> dict[str, str]:
     return summary
 
 
-def run_pipeline(config_path: Path, project_root: Path) -> None:
-    timings: dict[str, float] = {}
-    pipeline_start = time.perf_counter()
-    stage_start = pipeline_start
+def _require_path(path_value: Path | None, key_name: str) -> Path:
+    if path_value is None:
+        raise ValueError(f"paths.{key_name} is required for selected mode")
+    return path_value
 
-    runtime = load_runtime_config(config_path, project_root)
-    timings["config_ms"] = (time.perf_counter() - stage_start) * 1000.0
-    logger.info("[config] file=%s", config_path)
-    logger.info("[config] adapter=%s", runtime.adapter if runtime.adapter is not None else "-")
-    logger.info(
-        "[config] adapter_ref=%s",
-        runtime.adapter_ref if runtime.adapter_ref is not None else "-",
-    )
-    logger.info("[config] model=%s", runtime.model if runtime.model is not None else "-")
-    logger.info(
-        "[config] model_ref=%s",
-        runtime.model_ref if runtime.model_ref is not None else "-",
-    )
 
+def _compute_grid_mass(grid: list[list[float]]) -> float:
+    return float(sum(sum(float(cell) for cell in row) for row in grid))
+
+
+def _run_supervised(
+    runtime: RuntimeConfig, adapter_cls: type, model_cls: type, timings: dict[str, float]
+) -> None:
     stage_start = time.perf_counter()
-    adapter_cls = _resolve_adapter_class(runtime)
-    model_cls = _resolve_model_class(runtime)
-    timings["registry_ms"] = (time.perf_counter() - stage_start) * 1000.0
+    train_csv_path = _require_path(runtime.paths.train_csv, "train_csv")
+    infer_csv_path = _require_path(runtime.paths.infer_csv, "infer_csv")
+    predictions_csv_path = _require_path(runtime.paths.predictions_csv, "predictions_csv")
+    eval_report_csv_path = _require_path(runtime.paths.eval_report_csv, "eval_report_csv")
 
-    stage_start = time.perf_counter()
-    records, stats = read_csv_records(runtime.paths.train_csv)
+    records, stats = read_csv_records(train_csv_path)
     adapter = adapter_cls()
     states, adapter_stats = adapter.adapt_records(records)
     feature_matrix, feature_stats = adapter.build_feature_matrix(states)
@@ -121,14 +116,6 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
         logger.info("[adapter:%s] valid_states=%s", adapter.name, adapter_stats["valid_states"])
         logger.info("[features:%s] valid_vectors=%s", adapter.name, feature_stats["valid_vectors"])
         logger.info("[targets:%s] valid_vectors=%s", adapter.name, target_stats["valid_vectors"])
-        timings["total_ms"] = (time.perf_counter() - pipeline_start) * 1000.0
-        logger.info(
-            "[timing] config_ms=%.2f registry_ms=%.2f train_data_ms=%.2f total_ms=%.2f",
-            timings["config_ms"],
-            timings["registry_ms"],
-            timings["train_data_ms"],
-            timings["total_ms"],
-        )
         return
 
     stage_start = time.perf_counter()
@@ -204,12 +191,12 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
     infer_scored_rows = 0
     infer_anomaly_rows = 0
 
-    runtime.paths.predictions_csv.parent.mkdir(parents=True, exist_ok=True)
-    with runtime.paths.predictions_csv.open("w", encoding="utf-8", newline="") as out_file:
+    predictions_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with predictions_csv_path.open("w", encoding="utf-8", newline="") as out_file:
         writer = csv.writer(out_file)
         writer.writerow(["x", "y_pred", "residual", "anomaly_flag"])
         for infer_records_chunk, chunk_csv_stats in read_csv_records_in_chunks(
-            runtime.paths.infer_csv, runtime.infer_chunk_size
+            infer_csv_path, runtime.infer_chunk_size
         ):
             infer_csv_stats = chunk_csv_stats
             infer_matrix, chunk_infer_stats = adapter.build_infer_feature_matrix(infer_records_chunk)
@@ -241,15 +228,16 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
     logger.info("[infer] valid_vectors=%s", infer_stats["valid_vectors"])
     logger.info("[infer] scored_rows=%s", infer_scored_rows)
     logger.info("[infer] anomaly_rows=%s", infer_anomaly_rows)
-    logger.info("[infer] output_file=%s", runtime.paths.predictions_csv)
+    logger.info("[infer] output_file=%s", predictions_csv_path)
 
     stage_start = time.perf_counter()
-    runtime.paths.eval_report_csv.parent.mkdir(parents=True, exist_ok=True)
-    with runtime.paths.eval_report_csv.open("w", encoding="utf-8", newline="") as eval_file:
+    eval_report_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with eval_report_csv_path.open("w", encoding="utf-8", newline="") as eval_file:
         writer = csv.DictWriter(
             eval_file,
             fieldnames=[
                 "task",
+                "mode",
                 "split_shuffle",
                 "split_seed",
                 "train_samples",
@@ -268,6 +256,7 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
         writer.writerow(
             {
                 "task": runtime.task,
+                "mode": runtime.mode,
                 "split_shuffle": str(runtime.split_shuffle),
                 "split_seed": "" if runtime.split_seed is None else str(runtime.split_seed),
                 "train_samples": split_stats["train_samples"],
@@ -283,23 +272,192 @@ def run_pipeline(config_path: Path, project_root: Path) -> None:
             }
         )
     timings["eval_report_ms"] = (time.perf_counter() - stage_start) * 1000.0
-    logger.info("[eval] report_file=%s", runtime.paths.eval_report_csv)
+    logger.info("[eval] report_file=%s", eval_report_csv_path)
 
     logger.info("[csv] valid_rows=%s", stats["valid_rows"])
     logger.info("[adapter:%s] valid_states=%s", adapter.name, adapter_stats["valid_states"])
     logger.info("[features:%s] valid_vectors=%s", adapter.name, feature_stats["valid_vectors"])
     logger.info("[targets:%s] valid_vectors=%s", adapter.name, target_stats["valid_vectors"])
+
+
+def _run_simulation(
+    runtime: RuntimeConfig, adapter_cls: type, model_cls: type, timings: dict[str, float]
+) -> None:
+    stage_start = time.perf_counter()
+    initial_csv_path = _require_path(runtime.paths.initial_csv, "initial_csv")
+    trajectory_csv_path = _require_path(runtime.paths.trajectory_csv, "trajectory_csv")
+    eval_report_csv_path = _require_path(runtime.paths.eval_report_csv, "eval_report_csv")
+
+    records, csv_stats = read_csv_records(initial_csv_path)
+    adapter = adapter_cls()
+    build_initial_state_fn = getattr(adapter, "build_initial_state", None)
+    if not callable(build_initial_state_fn):
+        raise ValueError(f"adapter '{adapter_cls.__name__}' must implement build_initial_state()")
+    initial_state, adapter_stats = build_initial_state_fn(records, runtime.simulation)
+    timings["initial_data_ms"] = (time.perf_counter() - stage_start) * 1000.0
+
+    stage_start = time.perf_counter()
+    model = model_cls()
+    simulate_fn = getattr(model, "simulate", None)
+    if not callable(simulate_fn):
+        raise ValueError(f"model '{model_cls.__name__}' must implement simulate()")
+    model_summary = _format_model_summary(model)
+    for key, value in model_summary.items():
+        logger.info("[model:%s] %s=%s", runtime.task, key, value)
+    trajectory_states = simulate_fn(initial_state, runtime.simulation)
+    if not trajectory_states:
+        raise ValueError("simulation returned no states")
+    timings["simulate_ms"] = (time.perf_counter() - stage_start) * 1000.0
+
+    stage_start = time.perf_counter()
+    trajectory_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with trajectory_csv_path.open("w", encoding="utf-8", newline="") as trajectory_file:
+        writer = csv.writer(trajectory_file)
+        writer.writerow(["step", "x", "y", "h"])
+        for state in trajectory_states:
+            step = int(state.get("step", 0))
+            grid = state.get("grid")
+            if not isinstance(grid, list):
+                raise ValueError("simulation state must include 'grid' as a 2D list")
+            for y_idx, row in enumerate(grid):
+                if not isinstance(row, list):
+                    raise ValueError("simulation grid rows must be lists")
+                for x_idx, cell in enumerate(row):
+                    writer.writerow([step, x_idx, y_idx, float(cell)])
+    timings["trajectory_ms"] = (time.perf_counter() - stage_start) * 1000.0
+
+    initial_grid = trajectory_states[0].get("grid")
+    final_grid = trajectory_states[-1].get("grid")
+    if not isinstance(initial_grid, list) or not isinstance(final_grid, list):
+        raise ValueError("simulation states must expose initial and final grid values")
+
+    initial_mass = _compute_grid_mass(initial_grid)
+    final_mass = _compute_grid_mass(final_grid)
+    mass_delta_abs = abs(final_mass - initial_mass)
+
+    cfl_limit = float(trajectory_states[-1].get("cfl_limit", float("nan")))
+    stable_cfl = bool(trajectory_states[-1].get("stable_cfl", True))
+    boundary = str(runtime.simulation["boundary"])
+    mass_tolerance = float(runtime.simulation["mass_tolerance"])
+    should_check_mass = boundary in {"neumann", "periodic"}
+    mass_check = "checked" if should_check_mass else "skipped"
+    mass_ok = (mass_delta_abs <= mass_tolerance) if should_check_mass else True
+    status = "PASS" if stable_cfl and mass_ok else "FAIL"
+
+    logger.info("[simulation:%s] initial_cells=%s", runtime.task, csv_stats["valid_rows"])
+    logger.info("[simulation:%s] steps=%s", runtime.task, runtime.simulation["steps"])
+    logger.info("[simulation:%s] boundary=%s", runtime.task, boundary)
+    logger.info("[simulation:%s] stable_cfl=%s", runtime.task, stable_cfl)
+    logger.info("[simulation:%s] cfl_limit=%.6f", runtime.task, cfl_limit)
+    logger.info("[simulation:%s] mass_initial=%.6f", runtime.task, initial_mass)
+    logger.info("[simulation:%s] mass_final=%.6f", runtime.task, final_mass)
+    logger.info("[simulation:%s] mass_delta_abs=%.6f", runtime.task, mass_delta_abs)
+    logger.info("[simulation:%s] mass_check=%s", runtime.task, mass_check)
+    logger.info("[simulation:%s] status=%s", runtime.task, status)
+    logger.info("[simulation] trajectory_file=%s", trajectory_csv_path)
+    logger.info("[csv] valid_rows=%s", csv_stats["valid_rows"])
+    logger.info("[adapter:%s] valid_states=%s", adapter.name, adapter_stats["valid_states"])
+
+    stage_start = time.perf_counter()
+    eval_report_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with eval_report_csv_path.open("w", encoding="utf-8", newline="") as eval_file:
+        writer = csv.DictWriter(
+            eval_file,
+            fieldnames=[
+                "task",
+                "mode",
+                "steps_requested",
+                "states_recorded",
+                "boundary",
+                "dt",
+                "dx",
+                "dy",
+                "kappa",
+                "strict_cfl",
+                "cfl_limit",
+                "stable_cfl",
+                "mass_initial",
+                "mass_final",
+                "mass_delta_abs",
+                "mass_tolerance",
+                "mass_check",
+                "status",
+            ],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "task": runtime.task,
+                "mode": runtime.mode,
+                "steps_requested": runtime.simulation["steps"],
+                "states_recorded": len(trajectory_states),
+                "boundary": boundary,
+                "dt": f"{float(runtime.simulation['dt']):.6f}",
+                "dx": f"{float(runtime.simulation['dx']):.6f}",
+                "dy": f"{float(runtime.simulation['dy']):.6f}",
+                "kappa": f"{float(runtime.simulation['kappa']):.6f}",
+                "strict_cfl": str(bool(runtime.simulation["strict_cfl"])),
+                "cfl_limit": f"{cfl_limit:.6f}",
+                "stable_cfl": str(stable_cfl),
+                "mass_initial": f"{initial_mass:.6f}",
+                "mass_final": f"{final_mass:.6f}",
+                "mass_delta_abs": f"{mass_delta_abs:.6f}",
+                "mass_tolerance": f"{mass_tolerance:.6f}",
+                "mass_check": mass_check,
+                "status": status,
+            }
+        )
+    timings["eval_report_ms"] = (time.perf_counter() - stage_start) * 1000.0
+    logger.info("[eval] report_file=%s", eval_report_csv_path)
+
+
+def run_pipeline(config_path: Path, project_root: Path) -> None:
+    timings: dict[str, float] = {}
+    pipeline_start = time.perf_counter()
+    stage_start = pipeline_start
+
+    runtime = load_runtime_config(config_path, project_root)
+    timings["config_ms"] = (time.perf_counter() - stage_start) * 1000.0
+    logger.info("[config] file=%s", config_path)
+    logger.info("[config] mode=%s", runtime.mode)
+    logger.info("[config] adapter=%s", runtime.adapter if runtime.adapter is not None else "-")
+    logger.info(
+        "[config] adapter_ref=%s",
+        runtime.adapter_ref if runtime.adapter_ref is not None else "-",
+    )
+    logger.info("[config] model=%s", runtime.model if runtime.model is not None else "-")
+    logger.info(
+        "[config] model_ref=%s",
+        runtime.model_ref if runtime.model_ref is not None else "-",
+    )
+
+    stage_start = time.perf_counter()
+    adapter_cls = _resolve_adapter_class(runtime)
+    model_cls = _resolve_model_class(runtime)
+    timings["registry_ms"] = (time.perf_counter() - stage_start) * 1000.0
+
+    if runtime.mode == "supervised":
+        _run_supervised(runtime, adapter_cls, model_cls, timings)
+    elif runtime.mode == "simulation":
+        _run_simulation(runtime, adapter_cls, model_cls, timings)
+    else:
+        raise ValueError(f"unsupported mode: {runtime.mode}")
+
     timings["total_ms"] = (time.perf_counter() - pipeline_start) * 1000.0
     logger.info(
         (
             "[timing] config_ms=%.2f registry_ms=%.2f train_data_ms=%.2f "
-            "train_eval_ms=%.2f infer_ms=%.2f eval_report_ms=%.2f total_ms=%.2f"
+            "train_eval_ms=%.2f infer_ms=%.2f initial_data_ms=%.2f "
+            "simulate_ms=%.2f trajectory_ms=%.2f eval_report_ms=%.2f total_ms=%.2f"
         ),
-        timings["config_ms"],
-        timings["registry_ms"],
-        timings["train_data_ms"],
-        timings["train_eval_ms"],
-        timings["infer_ms"],
-        timings["eval_report_ms"],
+        timings.get("config_ms", 0.0),
+        timings.get("registry_ms", 0.0),
+        timings.get("train_data_ms", 0.0),
+        timings.get("train_eval_ms", 0.0),
+        timings.get("infer_ms", 0.0),
+        timings.get("initial_data_ms", 0.0),
+        timings.get("simulate_ms", 0.0),
+        timings.get("trajectory_ms", 0.0),
+        timings.get("eval_report_ms", 0.0),
         timings["total_ms"],
     )

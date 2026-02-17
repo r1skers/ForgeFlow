@@ -2,10 +2,12 @@
 
 ForgeFlow v1 is landed.
 It provides a reusable training-evaluation-inference framework, and has been validated with linear and polynomial-linear modeling tasks end to end.
+It now also supports a simulation execution mode for PDE-style tasks.
 
 ## v1 Capabilities
 
 - Config-driven pipeline execution (`python main.py --config ...`)
+- Dual execution modes: `supervised` and `simulation`
 - Pluggable `Adapter` and `Model` architecture
 - Regression evaluation (`MAE`, `RMSE`, `MaxAE`) with `PASS/FAIL`
 - Residual anomaly flagging via sigma rule
@@ -16,9 +18,9 @@ It provides a reusable training-evaluation-inference framework, and has been val
 
 - `forgeflow/core/`: runtime config, CSV IO, data split, evaluation, pipeline runner
 - `forgeflow/interfaces/`: adapter/model contracts and shared types
-- `forgeflow/plugins/`: built-in adapters/models and optional registry entries
+- `forgeflow/plugins/`: registry wrappers and optional compatibility aliases
 - `ForgeFlowApps/`: app-level tasks (config, data, adapters, models, outputs)
-- `experiments/`: baseline experiment bundles kept for compatibility demos
+- `experiments/`: legacy demos kept for compatibility checks
 
 ## Config Styles
 
@@ -31,12 +33,23 @@ Both styles are supported:
   - `adapter_ref`: `package.module:ClassName`
   - `model_ref`: `package.module:ClassName`
 
+`mode` controls which runtime branch is executed:
+
+- `supervised` (default): split -> fit/predict -> metrics/anomaly -> inference output
+- `simulation`: initial state -> time stepping simulation -> trajectory/eval report
+
 ## Quick Run
+
+Default run (same as linear app config):
+
+```bash
+python main.py
+```
 
 Linear baseline:
 
 ```bash
-python main.py --config experiments/linear_xy/config.json
+python main.py --config ForgeFlowApps/linear_xy/config/run.json
 ```
 
 Poly4 cubic app:
@@ -45,14 +58,33 @@ Poly4 cubic app:
 python main.py --config ForgeFlowApps/poly4_cubic/config/run.json
 ```
 
+DEM diffusion simulation:
+
+```bash
+python main.py --config ForgeFlowApps/dem_diffusion/config/run.json
+```
+
+Optional `make` shortcuts:
+
+```bash
+make run-linear
+make run-dem
+```
+
+If `make` is unavailable on Windows, use the equivalent `python main.py --config ...` commands above.
+
 ## Outputs
 
 Each task writes:
 
-- `output/predictions.csv`
 - `output/eval_report.csv`
 
-`predictions.csv` contains `y_pred`, and contains `residual`/`anomaly_flag` when labeled `y` is provided in inference input.
+Mode-specific outputs:
+
+- `supervised`: `output/predictions.csv` + `output/eval_report.csv`
+- `simulation`: `output/trajectory.csv` + `output/eval_report.csv`
+
+For supervised tasks, `predictions.csv` contains `y_pred`, and includes `residual`/`anomaly_flag` when labeled `y` is provided in inference input.
 
 ## Add a New App Task
 

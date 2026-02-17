@@ -40,6 +40,15 @@ class SupervisedAdapter(Protocol):
         ...
 
 
+class SimulationAdapter(Protocol):
+    name: str
+
+    def build_initial_state(
+        self, records: Iterable[Record], simulation: dict[str, object]
+    ) -> tuple[State, AdapterStats]:
+        ...
+
+
 def ensure_required_fields(record: Record, required_fields: tuple[str, ...]) -> None:
     missing_fields = [field for field in required_fields if field not in record]
     if missing_fields:

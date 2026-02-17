@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from forgeflow.interfaces.types import FeatureMatrix
+from forgeflow.interfaces.types import FeatureMatrix, State
 
 
 class RegressionModel(Protocol):
@@ -11,4 +11,9 @@ class RegressionModel(Protocol):
         ...
 
     def coefficients(self) -> list[list[float]]:
+        ...
+
+
+class SimulatorModel(Protocol):
+    def simulate(self, initial_state: State, simulation: dict[str, object]) -> list[State]:
         ...

@@ -10,7 +10,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path("experiments/linear_xy/config.json"),
+        default=Path("ForgeFlowApps/linear_xy/config/run.json"),
         help="Path to runtime configuration file (JSON).",
     )
     parser.add_argument(

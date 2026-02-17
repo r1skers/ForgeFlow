@@ -1,6 +1,6 @@
 # ForgeFlow Log
 
-Last updated: 2026-02-15
+Last updated: 2026-02-17
 
 ## 2026-02-11
 - Initialized project log file.
@@ -64,3 +64,34 @@ Last updated: 2026-02-15
   - `python main.py --config experiments/linear_xy/config.json`
 - Stage assessment: framework is now suitable as a reusable "data -> adapter -> model -> eval -> infer -> report" baseline for new tasks.
 - Future direction note: for larger datasets and stronger nonlinear relations, keep current adapter/runner/eval flow and add a PyTorch-based model plugin as an optional model backend.
+
+## 2026-02-17
+- Added runtime `mode` support in config (`supervised` default, `simulation` new).
+- Extended runtime path contract to support simulation assets (`initial_csv`, `trajectory_csv`) while keeping supervised paths unchanged.
+- Split core runner execution into two branches:
+  - `supervised`: existing fit/predict/eval/infer flow
+  - `simulation`: initial-state loading -> simulator stepping -> trajectory/eval output
+- Added simulation adapter and model plugins:
+  - `forgeflow/plugins/adapters/dem_grid.py`
+  - `forgeflow/plugins/models/diffusion_explicit.py`
+- Registered new plugins in `forgeflow/plugins/registry.py` (`dem_grid`, `diffusion_explicit`).
+- Added simulation app bundle:
+  - `ForgeFlowApps/dem_diffusion/config/run.json`
+  - `ForgeFlowApps/dem_diffusion/data/processed/initial.csv`
+  - `ForgeFlowApps/dem_diffusion/output/.gitkeep`
+- Updated `README.md` with dual-mode docs and simulation quick-run command.
+- Moved app-level task implementations for `linear_xy` and `dem_diffusion` into `ForgeFlowApps/`:
+  - `ForgeFlowApps/linear_xy/*`
+  - `ForgeFlowApps/dem_diffusion/*`
+- Updated default entry config in `main.py` to `ForgeFlowApps/linear_xy/config/run.json`.
+- Kept `forgeflow/plugins/*` as thin wrappers for backward compatibility with registry-key configs.
+- Added root `Makefile` task shortcuts:
+  - `run-linear`, `run-dem`, `run-poly4`, `run-solar`, `smoke`
+- Verified app runs after migration:
+  - `python main.py` (default linear app) -> PASS
+  - `python main.py --config ForgeFlowApps/dem_diffusion/config/run.json` -> PASS
+  - `python main.py --config ForgeFlowApps/poly4_cubic/config/run.json` -> PASS
+  - `python main.py --config experiments/linear_xy/config.json` -> PASS (legacy compatibility)
+- Verified make-based execution with MinGW make:
+  - `mingw32-make run-linear` -> PASS
+  - `mingw32-make -C d:/Github_Repos/ForgeFlow run-poly4` -> PASS

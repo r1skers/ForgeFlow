@@ -1,0 +1,28 @@
+{
+  "mode": "supervised",
+  "task": "linear_xy",
+  "adapter_ref": "ForgeFlowApps.linear_xy.adapters.linear_xy_adapter:LinearXYAdapter",
+  "model_ref": "ForgeFlowApps.linear_xy.models.linear_regression:LinearDynamicsRegressor",
+  "paths": {
+    "train_csv": "ForgeFlowApps/linear_xy/data/processed/train.csv",
+    "infer_csv": "ForgeFlowApps/linear_xy/data/infer/infer.csv",
+    "predictions_csv": "ForgeFlowApps/linear_xy/output/predictions.csv",
+    "eval_report_csv": "ForgeFlowApps/linear_xy/output/eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": false,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 10000
+  },
+  "eval_policy": {
+    "val_mae_max": 0.01,
+    "val_rmse_max": 0.01,
+    "val_maxae_max": 0.02
+  }
+}

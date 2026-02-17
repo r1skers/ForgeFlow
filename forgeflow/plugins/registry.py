@@ -1,12 +1,16 @@
+from forgeflow.plugins.adapters.dem_grid import DEMGridAdapter
 from forgeflow.plugins.adapters.linear_xy import LinearXYAdapter
+from forgeflow.plugins.models.diffusion_explicit import DiffusionExplicitSimulator
 from forgeflow.plugins.models.linear_regression import LinearDynamicsRegressor
 
 ADAPTER_REGISTRY = {
     "linear_xy": LinearXYAdapter,
+    "dem_grid": DEMGridAdapter,
 }
 
 MODEL_REGISTRY = {
     "linear_dynamics": LinearDynamicsRegressor,
+    "diffusion_explicit": DiffusionExplicitSimulator,
 }
 
 try:

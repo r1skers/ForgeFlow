@@ -95,3 +95,7 @@ Last updated: 2026-02-17
 - Verified make-based execution with MinGW make:
   - `mingw32-make run-linear` -> PASS
   - `mingw32-make -C d:/Github_Repos/ForgeFlow run-poly4` -> PASS
+- Reduced mode coupling in runner imports:
+  - Moved supervised-only evaluation imports (`metrics/policy/anomaly`) into `_run_supervised`.
+  - Made registry imports lazy in `_resolve_adapter_class` / `_resolve_model_class`.
+  - Result: `mode=simulation` with `adapter_ref/model_ref` no longer eagerly imports supervised evaluation stack during runner module import.

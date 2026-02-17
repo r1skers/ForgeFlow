@@ -3,15 +3,10 @@ import importlib
 import logging
 import time
 from pathlib import Path
-from typing import Any
 
 from forgeflow.core.config.runtime import RuntimeConfig, load_runtime_config
 from forgeflow.core.data.split import split_train_val
-from forgeflow.core.evaluation.anomaly import ResidualSigmaRule
-from forgeflow.core.evaluation.metrics import compute_regression_metrics
-from forgeflow.core.evaluation.policy import evaluate_pass_fail, get_eval_policy
 from forgeflow.core.io.csv_reader import read_csv_records, read_csv_records_in_chunks
-from forgeflow.plugins.registry import ADAPTER_REGISTRY, MODEL_REGISTRY
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +33,8 @@ def _resolve_adapter_class(runtime: RuntimeConfig) -> type:
         return _load_class_from_ref(runtime.adapter_ref)
     if runtime.adapter is None:
         raise ValueError("adapter is not configured")
+    from forgeflow.plugins.registry import ADAPTER_REGISTRY
+
     adapter_cls = ADAPTER_REGISTRY.get(runtime.adapter)
     if adapter_cls is None:
         raise ValueError(f"unknown adapter: {runtime.adapter}")
@@ -49,6 +46,8 @@ def _resolve_model_class(runtime: RuntimeConfig) -> type:
         return _load_class_from_ref(runtime.model_ref)
     if runtime.model is None:
         raise ValueError("model is not configured")
+    from forgeflow.plugins.registry import MODEL_REGISTRY
+
     model_cls = MODEL_REGISTRY.get(runtime.model)
     if model_cls is None:
         raise ValueError(f"unknown model: {runtime.model}")
@@ -95,6 +94,10 @@ def _compute_grid_mass(grid: list[list[float]]) -> float:
 def _run_supervised(
     runtime: RuntimeConfig, adapter_cls: type, model_cls: type, timings: dict[str, float]
 ) -> None:
+    from forgeflow.core.evaluation.anomaly import ResidualSigmaRule
+    from forgeflow.core.evaluation.metrics import compute_regression_metrics
+    from forgeflow.core.evaluation.policy import evaluate_pass_fail, get_eval_policy
+
     stage_start = time.perf_counter()
     train_csv_path = _require_path(runtime.paths.train_csv, "train_csv")
     infer_csv_path = _require_path(runtime.paths.infer_csv, "infer_csv")

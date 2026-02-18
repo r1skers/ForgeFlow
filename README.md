@@ -64,14 +64,29 @@ DEM diffusion simulation:
 python main.py --config ForgeFlowApps/dem_diffusion/config/run.json
 ```
 
+Ink diffusion simulation:
+
+```bash
+python main.py --config ForgeFlowApps/ink_diffusion/config/run.json
+```
+
+Ink diffusion surrogate regression:
+
+```bash
+python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_run.json
+```
+
 Optional `make` shortcuts:
 
 ```bash
 make run-linear
 make run-dem
+make run-ink
+make build-ink-surrogate-data
+make run-ink-surrogate
 ```
 
-If `make` is unavailable on Windows, use the equivalent `python main.py --config ...` commands above.
+If `make` is unavailable on Windows, use the equivalent `python main.py --config ...` commands above, or run `mingw32-make`.
 
 ## Outputs
 

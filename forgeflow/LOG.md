@@ -1,6 +1,6 @@
 # ForgeFlow Log
 
-Last updated: 2026-02-17
+Last updated: 2026-02-18
 
 ## 2026-02-11
 - Initialized project log file.
@@ -104,3 +104,46 @@ Last updated: 2026-02-17
 - Updated runner registry resolution to load class references on demand, supporting both string and class entries.
 - Hardened `forgeflow/plugins/adapters/__init__.py` and `forgeflow/plugins/models/__init__.py` with lazy exports to avoid package-level eager imports.
 - Confirmed `mode=simulation` no longer imports numpy even when using registry-key config (`adapter=dem_grid`, `model=diffusion_explicit`).
+
+## 2026-02-18
+- Added new app scaffold: `ForgeFlowApps/ink_diffusion/` (config/data/output/README).
+- Added simulation config `ForgeFlowApps/ink_diffusion/config/run.json` using:
+  - adapter: `ForgeFlowApps.dem_diffusion.adapters.dem_grid_adapter:DEMGridAdapter`
+  - model: `ForgeFlowApps.dem_diffusion.models.diffusion_explicit:DiffusionExplicitSimulator`
+- Generated Gaussian initial field data: `ForgeFlowApps/ink_diffusion/data/processed/initial.csv` (100x100 grid).
+- Verified run:
+  - `python main.py --config ForgeFlowApps/ink_diffusion/config/run.json` -> PASS
+  - periodic boundary, CFL stable, mass conserved.
+- Added Makefile target:
+  - `run-ink`
+- Added trajectory-to-supervised export script:
+  - `ForgeFlowApps/ink_diffusion/scripts/build_supervised_samples.py`
+  - exports `step,x,y,h_t,h_t1` from trajectory pairs
+- Added Makefile target:
+  - `build-ink-samples`
+- Added ignore rule for large generated dataset:
+  - `ForgeFlowApps/ink_diffusion/data/processed/supervised_samples.csv`
+- Verified sample export:
+  - `python ForgeFlowApps/ink_diffusion/scripts/build_supervised_samples.py`
+  - produced `step_pairs=200`, `rows=2000000`
+- Added supervised surrogate learning path for ink diffusion:
+  - adapter: `ForgeFlowApps/ink_diffusion/adapters/ink_surrogate_adapter.py`
+  - config: `ForgeFlowApps/ink_diffusion/config/surrogate_run.json`
+  - uses local 5-point neighborhood features (`h_t`, `h_up`, `h_down`, `h_left`, `h_right`) to predict `h_t1`
+- Added surrogate dataset builder:
+  - `ForgeFlowApps/ink_diffusion/scripts/build_surrogate_datasets.py`
+  - outputs:
+    - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_train.csv`
+    - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_infer.csv`
+  - default build (stride=4) produced:
+    - `train_rows=100000`
+    - `infer_rows=25000`
+- Added Makefile targets:
+  - `build-ink-surrogate-data`
+  - `run-ink-surrogate`
+- Added ignore rules for generated surrogate datasets:
+  - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_train.csv`
+  - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_infer.csv`
+- Verified supervised run:
+  - `python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_run.json` -> PASS
+  - `val_mae=0.000000`, `val_rmse=0.000000`, `val_maxae=0.000000`

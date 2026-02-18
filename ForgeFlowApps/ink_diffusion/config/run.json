@@ -1,0 +1,23 @@
+{
+  "mode": "simulation",
+  "task": "ink_diffusion",
+  "adapter_ref": "ForgeFlowApps.dem_diffusion.adapters.dem_grid_adapter:DEMGridAdapter",
+  "model_ref": "ForgeFlowApps.dem_diffusion.models.diffusion_explicit:DiffusionExplicitSimulator",
+  "paths": {
+    "initial_csv": "ForgeFlowApps/ink_diffusion/data/processed/initial.csv",
+    "trajectory_csv": "ForgeFlowApps/ink_diffusion/output/trajectory.csv",
+    "eval_report_csv": "ForgeFlowApps/ink_diffusion/output/eval_report.csv"
+  },
+  "simulation": {
+    "steps": 200,
+    "dt": 0.04,
+    "dx": 0.1,
+    "dy": 0.1,
+    "kappa": 0.05,
+    "boundary": "periodic",
+    "strict_cfl": true,
+    "mass_tolerance": 0.0001,
+    "grid_nx": 100,
+    "grid_ny": 100
+  }
+}

@@ -147,3 +147,18 @@ Last updated: 2026-02-18
 - Verified supervised run:
   - `python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_run.json` -> PASS
   - `val_mae=0.000000`, `val_rmse=0.000000`, `val_maxae=0.000000`
+- Moved ink simulation components to app-local modules (instance-local PDE flow):
+  - adapter: `ForgeFlowApps/ink_diffusion/adapters/ink_grid_adapter.py`
+  - model: `ForgeFlowApps/ink_diffusion/models/ink_diffusion_explicit.py`
+  - config update: `ForgeFlowApps/ink_diffusion/config/run.json` now references local adapter/model.
+- Verified after localization:
+  - `python main.py --config ForgeFlowApps/ink_diffusion/config/run.json` -> PASS
+  - `mingw32-make run-ink` -> PASS
+  - `python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_run.json` -> PASS
+- Added visualization report script:
+  - `ForgeFlowApps/ink_diffusion/scripts/plot_report.py`
+  - outputs:
+    - `ForgeFlowApps/ink_diffusion/output/report/simulation_report.png`
+    - `ForgeFlowApps/ink_diffusion/output/report/surrogate_report.png`
+- Added Makefile target:
+  - `plot-ink-report`

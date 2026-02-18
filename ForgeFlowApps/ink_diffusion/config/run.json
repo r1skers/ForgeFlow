@@ -1,8 +1,8 @@
 {
   "mode": "simulation",
   "task": "ink_diffusion",
-  "adapter_ref": "ForgeFlowApps.dem_diffusion.adapters.dem_grid_adapter:DEMGridAdapter",
-  "model_ref": "ForgeFlowApps.dem_diffusion.models.diffusion_explicit:DiffusionExplicitSimulator",
+  "adapter_ref": "ForgeFlowApps.ink_diffusion.adapters.ink_grid_adapter:InkGridAdapter",
+  "model_ref": "ForgeFlowApps.ink_diffusion.models.ink_diffusion_explicit:InkDiffusionExplicitSimulator",
   "paths": {
     "initial_csv": "ForgeFlowApps/ink_diffusion/data/processed/initial.csv",
     "trajectory_csv": "ForgeFlowApps/ink_diffusion/output/trajectory.csv",

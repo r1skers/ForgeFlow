@@ -1,3 +1,4 @@
+from ForgeFlowApps.ink_diffusion.adapters.ink_grid_adapter import InkGridAdapter
 from ForgeFlowApps.ink_diffusion.adapters.ink_surrogate_adapter import InkSurrogateAdapter
 
-__all__ = ["InkSurrogateAdapter"]
+__all__ = ["InkGridAdapter", "InkSurrogateAdapter"]

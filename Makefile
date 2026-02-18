@@ -8,8 +8,9 @@ INK_CONFIG := ForgeFlowApps/ink_diffusion/config/run.json
 INK_SAMPLE_SCRIPT := ForgeFlowApps/ink_diffusion/scripts/build_supervised_samples.py
 INK_SURROGATE_DATA_SCRIPT := ForgeFlowApps/ink_diffusion/scripts/build_surrogate_datasets.py
 INK_SURROGATE_CONFIG := ForgeFlowApps/ink_diffusion/config/surrogate_run.json
+INK_REPORT_SCRIPT := ForgeFlowApps/ink_diffusion/scripts/plot_report.py
 
-.PHONY: run-linear run-dem run-poly4 run-solar run-ink build-ink-samples build-ink-surrogate-data run-ink-surrogate smoke
+.PHONY: run-linear run-dem run-poly4 run-solar run-ink build-ink-samples build-ink-surrogate-data run-ink-surrogate plot-ink-report smoke
 
 run-linear:
 	$(PYTHON) main.py --config $(LINEAR_CONFIG)
@@ -34,5 +35,8 @@ build-ink-surrogate-data:
 
 run-ink-surrogate:
 	$(PYTHON) main.py --config $(INK_SURROGATE_CONFIG)
+
+plot-ink-report:
+	$(PYTHON) $(INK_REPORT_SCRIPT)
 
 smoke: run-linear run-dem

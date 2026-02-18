@@ -38,6 +38,7 @@ Thumbs.db
 # Project run outputs (keep directory placeholders)
 **/output/*.csv
 !**/output/.gitkeep
+ForgeFlowApps/ink_diffusion/output/report/*.png
 
 # Generated large datasets
 ForgeFlowApps/ink_diffusion/data/processed/supervised_samples.csv

@@ -84,6 +84,7 @@ make run-dem
 make run-ink
 make build-ink-surrogate-data
 make run-ink-surrogate
+make plot-ink-report
 ```
 
 If `make` is unavailable on Windows, use the equivalent `python main.py --config ...` commands above, or run `mingw32-make`.

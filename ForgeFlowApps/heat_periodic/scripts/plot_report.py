@@ -3,7 +3,6 @@ import csv
 import math
 import random
 from pathlib import Path
-from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,8 +35,8 @@ def _load_simulation_stats_and_snapshots(
     snapshot_steps = [0, mid_step, max_step]
 
     mass = np.zeros(max_step + 1, dtype=float)
-    peak = np.full(max_step + 1, -np.inf, dtype=float)
-    valley = np.full(max_step + 1, np.inf, dtype=float)
+    max_abs = np.zeros(max_step + 1, dtype=float)
+    min_val = np.full(max_step + 1, np.inf, dtype=float)
     snapshots = {step: np.zeros((ny, nx), dtype=float) for step in snapshot_steps}
 
     with trajectory_csv.open("r", encoding="utf-8", newline="") as f:
@@ -49,12 +48,12 @@ def _load_simulation_stats_and_snapshots(
             h_val = float(row["h"])
 
             mass[step] += h_val
-            peak[step] = max(peak[step], h_val)
-            valley[step] = min(valley[step], h_val)
+            max_abs[step] = max(max_abs[step], abs(h_val))
+            min_val[step] = min(min_val[step], h_val)
             if step in snapshots:
                 snapshots[step][y_idx, x_idx] = h_val
 
-    return mass, peak, valley, snapshots
+    return mass, max_abs, min_val, snapshots
 
 
 def _read_eval_row(eval_csv: Path) -> dict[str, str]:
@@ -69,32 +68,50 @@ def _plot_simulation_report(
     trajectory_csv: Path,
     simulation_eval_csv: Path,
     output_png: Path,
+    amplitude: float,
 ) -> None:
-    mass, peak, valley, snapshots = _load_simulation_stats_and_snapshots(trajectory_csv)
+    mass, max_abs, min_val, snapshots = _load_simulation_stats_and_snapshots(trajectory_csv)
     steps = np.arange(len(mass))
     eval_row = _read_eval_row(simulation_eval_csv)
+
+    dt = float(eval_row.get("dt", "1.0"))
+    kappa = float(eval_row.get("kappa", "0.05"))
+    exact_peak = amplitude * np.exp(-8.0 * math.pi * math.pi * kappa * steps * dt)
 
     fig = plt.figure(figsize=(14, 9))
     gs = fig.add_gridspec(2, 3, height_ratios=[1.0, 0.9])
 
     ordered_steps = sorted(snapshots.keys())
+    # Use one shared color scale so amplitude decay is visible across snapshots.
+    shared_abs_max = max(float(np.max(np.abs(snapshots[step]))) for step in ordered_steps)
+    if shared_abs_max <= 0.0:
+        shared_abs_max = 1.0
+
     for i, step in enumerate(ordered_steps):
         ax = fig.add_subplot(gs[0, i])
-        im = ax.imshow(snapshots[step], cmap="Blues", origin="lower")
-        ax.set_title(f"Concentration @ step={step}")
+        step_abs_max = float(np.max(np.abs(snapshots[step])))
+        im = ax.imshow(
+            snapshots[step],
+            cmap="coolwarm",
+            origin="lower",
+            vmin=-shared_abs_max,
+            vmax=shared_abs_max,
+        )
+        ax.set_title(f"u @ step={step}\nmax|u|={step_abs_max:.3f}")
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    ax_mass = fig.add_subplot(gs[1, :2])
-    ax_mass.plot(steps, mass, label="mass(t)", color="#1f77b4")
-    ax_mass.plot(steps, peak, label="max(h)", color="#d62728")
-    ax_mass.plot(steps, valley, label="min(h)", color="#2ca02c")
-    ax_mass.set_title("Simulation Diagnostics")
-    ax_mass.set_xlabel("step")
-    ax_mass.set_ylabel("value")
-    ax_mass.grid(alpha=0.2)
-    ax_mass.legend()
+    ax_diag = fig.add_subplot(gs[1, :2])
+    ax_diag.plot(steps, max_abs, label="max(|u|) numeric", color="#1f77b4")
+    ax_diag.plot(steps, exact_peak, label="max(|u|) exact", color="#d62728", linestyle="--")
+    ax_diag.plot(steps, np.abs(mass), label="|mass|", color="#2ca02c")
+    ax_diag.plot(steps, np.abs(min_val), label="|min(u)|", color="#9467bd", alpha=0.6)
+    ax_diag.set_title("Heat Simulation Diagnostics")
+    ax_diag.set_xlabel("step")
+    ax_diag.set_ylabel("value")
+    ax_diag.grid(alpha=0.2)
+    ax_diag.legend()
 
     ax_text = fig.add_subplot(gs[1, 2])
     ax_text.axis("off")
@@ -114,16 +131,14 @@ def _plot_simulation_report(
     )
     ax_text.text(0.0, 1.0, text, va="top", ha="left", fontsize=11)
 
-    fig.suptitle("Ink Diffusion Simulation Report", fontsize=14)
+    fig.suptitle("Heat Periodic Simulation Report", fontsize=14)
     fig.tight_layout()
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_png, dpi=150)
     plt.close(fig)
 
 
-def _load_surrogate_pairs(
-    infer_csv: Path, predictions_csv: Path
-) -> tuple[np.ndarray, np.ndarray]:
+def _load_surrogate_pairs(infer_csv: Path, predictions_csv: Path) -> tuple[np.ndarray, np.ndarray]:
     y_true: list[float] = []
     with infer_csv.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -137,9 +152,7 @@ def _load_surrogate_pairs(
             y_pred.append(float(row["y_pred"]))
 
     if len(y_true) != len(y_pred):
-        raise ValueError(
-            f"infer/prediction length mismatch: {len(y_true)} vs {len(y_pred)}"
-        )
+        raise ValueError(f"infer/prediction length mismatch: {len(y_true)} vs {len(y_pred)}")
     return np.asarray(y_true, dtype=float), np.asarray(y_pred, dtype=float)
 
 
@@ -148,11 +161,7 @@ def _compute_basic_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, 
     mae = float(np.mean(np.abs(errors)))
     rmse = float(math.sqrt(float(np.mean(np.square(errors)))))
     maxae = float(np.max(np.abs(errors)))
-    return {
-        "mae": mae,
-        "rmse": rmse,
-        "maxae": maxae,
-    }
+    return {"mae": mae, "rmse": rmse, "maxae": maxae}
 
 
 def _plot_surrogate_report(
@@ -207,7 +216,7 @@ def _plot_surrogate_report(
     )
     axes[2].text(0.0, 1.0, text, va="top", ha="left", fontsize=11)
 
-    fig.suptitle("Ink Diffusion Surrogate Report", fontsize=14)
+    fig.suptitle("Heat Periodic Surrogate Report", fontsize=14)
     fig.tight_layout()
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_png, dpi=150)
@@ -240,7 +249,7 @@ def _plot_rollout_report(
     if not rows:
         raise ValueError("rollout step report is empty")
 
-    eval_row = _read_eval_row(rollout_summary_csv)
+    summary = _read_eval_row(rollout_summary_csv)
     steps = np.asarray([row["step"] for row in rows], dtype=float)
     mae = np.asarray([row["mae"] for row in rows], dtype=float)
     rmse = np.asarray([row["rmse"] for row in rows], dtype=float)
@@ -267,111 +276,18 @@ def _plot_rollout_report(
     axes[2].axis("off")
     text = (
         "Rollout Summary\n"
-        f"status: {eval_row.get('status', '-')}\n"
-        f"rollout_steps: {eval_row.get('rollout_steps', '-')}\n"
-        f"mean_mae: {eval_row.get('mean_mae', '-')}\n"
-        f"mean_rmse: {eval_row.get('mean_rmse', '-')}\n"
-        f"max_maxae: {eval_row.get('max_maxae', '-')}\n"
-        f"last_mae: {eval_row.get('last_mae', '-')}\n"
-        f"last_rmse: {eval_row.get('last_rmse', '-')}\n"
-        f"last_maxae: {eval_row.get('last_maxae', '-')}"
+        f"status: {summary.get('status', '-')}\n"
+        f"rollout_steps: {summary.get('rollout_steps', '-')}\n"
+        f"mean_mae: {summary.get('mean_mae', '-')}\n"
+        f"mean_rmse: {summary.get('mean_rmse', '-')}\n"
+        f"max_maxae: {summary.get('max_maxae', '-')}\n"
+        f"last_mae: {summary.get('last_mae', '-')}\n"
+        f"last_rmse: {summary.get('last_rmse', '-')}\n"
+        f"last_maxae: {summary.get('last_maxae', '-')}"
     )
     axes[2].text(0.0, 1.0, text, va="top", ha="left", fontsize=11)
 
-    fig.suptitle("Ink Diffusion Surrogate Rollout Report", fontsize=14)
-    fig.tight_layout()
-    output_png.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_png, dpi=150)
-    plt.close(fig)
-
-
-def _summarize_multi_kappa(
-    manifest_csv: Path, active_threshold: float
-) -> list[dict[str, Any]]:
-    with manifest_csv.open("r", encoding="utf-8", newline="") as f:
-        rows = list(csv.DictReader(f))
-    if not rows:
-        raise ValueError("multi-kappa manifest is empty")
-
-    summaries: list[dict[str, Any]] = []
-    for row in rows:
-        kappa = float(row["kappa"])
-        steps = int(row["steps"])
-        trajectory_csv = Path(row["trajectory_csv"])
-        if not trajectory_csv.is_absolute():
-            trajectory_csv = (manifest_csv.parent / trajectory_csv).resolve()
-
-        final_max = float("-inf")
-        final_sum = 0.0
-        final_count = 0
-        final_active = 0
-        with trajectory_csv.open("r", encoding="utf-8", newline="") as tf:
-            reader = csv.DictReader(tf)
-            for trow in reader:
-                step = int(trow["step"])
-                if step != steps:
-                    continue
-                h_val = float(trow["h"])
-                final_max = max(final_max, h_val)
-                final_sum += h_val
-                final_count += 1
-                if h_val > active_threshold:
-                    final_active += 1
-
-        final_mean = final_sum / final_count if final_count > 0 else float("nan")
-        summaries.append(
-            {
-                "kappa": kappa,
-                "dt": float(row["dt"]),
-                "steps": steps,
-                "status": row["status"],
-                "mass_delta_abs": float(row["mass_delta_abs"]),
-                "final_max_h": final_max,
-                "final_mean_h": final_mean,
-                "final_active_cells": final_active,
-            }
-        )
-
-    return sorted(summaries, key=lambda item: float(item["kappa"]))
-
-
-def _plot_multi_kappa_report(
-    manifest_csv: Path,
-    output_png: Path,
-    active_threshold: float,
-) -> None:
-    summaries = _summarize_multi_kappa(manifest_csv, active_threshold=active_threshold)
-    kappas = np.asarray([row["kappa"] for row in summaries], dtype=float)
-    final_max = np.asarray([row["final_max_h"] for row in summaries], dtype=float)
-    active_cells = np.asarray([row["final_active_cells"] for row in summaries], dtype=float)
-    mass_drift = np.asarray([row["mass_delta_abs"] for row in summaries], dtype=float)
-    status_flags = [row["status"] for row in summaries]
-
-    fig, axes = plt.subplots(1, 3, figsize=(16, 5))
-
-    axes[0].plot(kappas, final_max, marker="o", color="#1f77b4")
-    axes[0].set_title("Final Peak vs Kappa")
-    axes[0].set_xlabel("kappa")
-    axes[0].set_ylabel("final max(h)")
-    axes[0].grid(alpha=0.2)
-
-    axes[1].plot(kappas, active_cells, marker="o", color="#ff7f0e")
-    axes[1].set_title(f"Active Cells (h > {active_threshold:g})")
-    axes[1].set_xlabel("kappa")
-    axes[1].set_ylabel("cell count")
-    axes[1].grid(alpha=0.2)
-
-    axes[2].plot(kappas, mass_drift, marker="o", color="#2ca02c")
-    axes[2].set_title("Mass Drift vs Kappa")
-    axes[2].set_xlabel("kappa")
-    axes[2].set_ylabel("abs mass drift")
-    axes[2].grid(alpha=0.2)
-
-    all_pass = all(flag == "PASS" for flag in status_flags)
-    fig.suptitle(
-        f"Ink Diffusion Multi-Kappa Report (all_status={'PASS' if all_pass else 'MIXED'})",
-        fontsize=14,
-    )
+    fig.suptitle("Heat Periodic Surrogate Rollout Report", fontsize=14)
     fig.tight_layout()
     output_png.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_png, dpi=150)
@@ -379,57 +295,52 @@ def _plot_multi_kappa_report(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build visual reports for ink diffusion pipeline.")
+    parser = argparse.ArgumentParser(description="Build visual reports for heat periodic pipeline.")
     parser.add_argument(
         "--trajectory",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/trajectory.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/output/trajectory.csv"),
     )
     parser.add_argument(
         "--simulation-eval",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/eval_report.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/output/eval_report.csv"),
     )
     parser.add_argument(
         "--surrogate-infer",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/data/processed/surrogate_infer.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/data/processed/surrogate_infer.csv"),
     )
     parser.add_argument(
         "--surrogate-predictions",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/surrogate_predictions.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/output/surrogate_predictions.csv"),
     )
     parser.add_argument(
         "--surrogate-eval",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/surrogate_eval_report.csv"),
-    )
-    parser.add_argument(
-        "--out-dir",
-        type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/report"),
+        default=Path("ForgeFlowApps/heat_periodic/output/surrogate_eval_report.csv"),
     )
     parser.add_argument(
         "--rollout-steps-csv",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/surrogate_rollout_steps.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/output/surrogate_rollout_steps.csv"),
     )
     parser.add_argument(
         "--rollout-summary-csv",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/surrogate_rollout_summary.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/output/surrogate_rollout_summary.csv"),
     )
     parser.add_argument(
-        "--multi-kappa-manifest",
+        "--out-dir",
         type=Path,
-        default=Path("ForgeFlowApps/ink_diffusion/output/multi_kappa/manifest.csv"),
+        default=Path("ForgeFlowApps/heat_periodic/output/report"),
     )
     parser.add_argument(
-        "--active-threshold",
+        "--amplitude",
         type=float,
-        default=1e-4,
-        help="Threshold for counting active cells in multi-kappa summary.",
+        default=1.0,
+        help="Initial amplitude used for exact max(|u|) decay reference.",
     )
     parser.add_argument(
         "--scatter-points",
@@ -442,12 +353,12 @@ def main() -> None:
     simulation_png = args.out_dir / "simulation_report.png"
     surrogate_png = args.out_dir / "surrogate_report.png"
     rollout_png = args.out_dir / "rollout_report.png"
-    multi_kappa_png = args.out_dir / "multi_kappa_report.png"
 
     _plot_simulation_report(
         trajectory_csv=args.trajectory,
         simulation_eval_csv=args.simulation_eval,
         output_png=simulation_png,
+        amplitude=float(args.amplitude),
     )
     _plot_surrogate_report(
         infer_csv=args.surrogate_infer,
@@ -463,22 +374,12 @@ def main() -> None:
             rollout_summary_csv=args.rollout_summary_csv,
             output_png=rollout_png,
         )
-        print(f"[plot] rollout_report={rollout_png.resolve()}")
+        print(f"[heat-plot] rollout_report={rollout_png.resolve()}")
     else:
-        print("[plot] rollout_report=skipped (missing rollout CSV files)")
+        print("[heat-plot] rollout_report=skipped (missing rollout CSV files)")
 
-    if args.multi_kappa_manifest.exists():
-        _plot_multi_kappa_report(
-            manifest_csv=args.multi_kappa_manifest,
-            output_png=multi_kappa_png,
-            active_threshold=float(args.active_threshold),
-        )
-        print(f"[plot] multi_kappa_report={multi_kappa_png.resolve()}")
-    else:
-        print("[plot] multi_kappa_report=skipped (missing multi_kappa manifest)")
-
-    print(f"[plot] simulation_report={simulation_png.resolve()}")
-    print(f"[plot] surrogate_report={surrogate_png.resolve()}")
+    print(f"[heat-plot] simulation_report={simulation_png.resolve()}")
+    print(f"[heat-plot] surrogate_report={surrogate_png.resolve()}")
 
 
 if __name__ == "__main__":

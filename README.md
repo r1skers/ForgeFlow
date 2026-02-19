@@ -76,12 +76,33 @@ Ink diffusion surrogate regression:
 python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_run.json
 ```
 
+Ink diffusion kappa-aware surrogate regression (ID / OOD infer):
+
+```bash
+python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_kappa_id_run.json
+python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_kappa_ood_run.json
+```
+
+Ink diffusion surrogate rollout prediction:
+
+```bash
+python ForgeFlowApps/ink_diffusion/scripts/run_surrogate_rollout_eval.py
+```
+
 Optional `make` shortcuts:
 
 ```bash
 make run-linear
 make run-dem
 make run-ink
+make run-ink-convergence
+make run-ink-spatial-convergence
+make run-ink-verify
+make build-ink-multi-kappa-trajectories
+make build-ink-multi-kappa-data
+make run-ink-surrogate-kappa-id
+make run-ink-surrogate-kappa-ood
+make run-ink-rollout
 make build-ink-surrogate-data
 make run-ink-surrogate
 make plot-ink-report
@@ -101,6 +122,8 @@ Mode-specific outputs:
 - `simulation`: `output/trajectory.csv` + `output/eval_report.csv`
 
 For supervised tasks, `predictions.csv` contains `y_pred`, and includes `residual`/`anomaly_flag` when labeled `y` is provided in inference input.
+
+Verification suites can additionally output `output/verification_summary.csv` (step-level PASS/FAIL aggregation).
 
 ## Add a New App Task
 

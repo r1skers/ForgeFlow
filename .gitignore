@@ -44,3 +44,14 @@ ForgeFlowApps/ink_diffusion/output/report/*.png
 ForgeFlowApps/ink_diffusion/data/processed/supervised_samples.csv
 ForgeFlowApps/ink_diffusion/data/processed/surrogate_train.csv
 ForgeFlowApps/ink_diffusion/data/processed/surrogate_infer.csv
+ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_train.csv
+ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_infer_id.csv
+ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_infer_ood.csv
+ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_*_test.csv
+ForgeFlowApps/ink_diffusion/output/multi_kappa/*.csv
+ForgeFlowApps/ink_diffusion/output/multi_kappa_test/
+ForgeFlowApps/heat_periodic/data/processed/surrogate_train.csv
+ForgeFlowApps/heat_periodic/data/processed/surrogate_infer.csv
+ForgeFlowApps/heat_periodic/output/exact_convergence_tmp.csv
+ForgeFlowApps/heat_periodic/output/report/*.png
+ForgeFlowApps/heat_periodic/output/report_long_t/*.png

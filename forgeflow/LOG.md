@@ -1,6 +1,6 @@
 # ForgeFlow Log
 
-Last updated: 2026-02-18
+Last updated: 2026-02-19
 
 ## 2026-02-11
 - Initialized project log file.
@@ -162,3 +162,238 @@ Last updated: 2026-02-18
     - `ForgeFlowApps/ink_diffusion/output/report/surrogate_report.png`
 - Added Makefile target:
   - `plot-ink-report`
+
+## 2026-02-19
+- Started "error and convergence" stage for ink diffusion.
+- Added time-step convergence study script:
+  - `ForgeFlowApps/ink_diffusion/scripts/run_convergence_study.py`
+  - runs multiple `dt` cases to same physical end time and compares final grids against the finest-`dt` reference case.
+  - outputs per-case CFL/mass checks, L2/Linf errors, and observed order estimates.
+- Added Makefile target:
+  - `run-ink-convergence`
+- Updated docs:
+  - `ForgeFlowApps/ink_diffusion/README.md` with convergence command and output file.
+  - `README.md` make shortcut list includes `run-ink-convergence`.
+- Verified by running:
+  - `python ForgeFlowApps/ink_diffusion/scripts/run_convergence_study.py`
+- Generated report:
+  - `ForgeFlowApps/ink_diffusion/output/convergence_report.csv`
+  - default cases (`dt=0.04, 0.02, 0.01`) all `PASS`.
+  - observed order (coarse->mid, vs fine reference): `p_l2=1.585616`, `p_linf=1.584169`.
+- Added spatial convergence study script:
+  - `ForgeFlowApps/ink_diffusion/scripts/run_spatial_convergence_study.py`
+  - runs nested grid levels from base initial field (`stride=4,2,1` by default),
+    auto-selects `dt` from per-level CFL limit (`cfl_safety`), and compares each
+    coarse/fine result to the finest grid reference sampled at matching coordinates.
+  - outputs per-level CFL/mass checks, L2/Linf errors, and observed spatial order estimates.
+- Added Makefile target:
+  - `run-ink-spatial-convergence`
+- Updated docs:
+  - `ForgeFlowApps/ink_diffusion/README.md` with spatial convergence command and output file.
+  - `README.md` make shortcut list includes `run-ink-spatial-convergence`.
+- Verified by running:
+  - `python ForgeFlowApps/ink_diffusion/scripts/run_spatial_convergence_study.py`
+  - `mingw32-make run-ink-spatial-convergence`
+- Generated report:
+  - `ForgeFlowApps/ink_diffusion/output/spatial_convergence_report.csv`
+  - default levels (`stride=4,2,1`) all `PASS`.
+  - observed spatial order (coarse->mid, vs fine reference): `p_l2=2.198208`, `p_linf=1.987381`.
+- Added framework-level verification module:
+  - `forgeflow/core/verification/runner.py`
+  - `forgeflow/core/verification/__init__.py`
+  - supports config-driven step execution, report status parsing, and summary aggregation.
+- Added app verification config:
+  - `ForgeFlowApps/ink_diffusion/config/verification.json`
+  - steps include `time_convergence`, `spatial_convergence`, and `surrogate_eval`.
+- Added Makefile target:
+  - `run-ink-verify`
+- Updated docs:
+  - `ForgeFlowApps/ink_diffusion/README.md` with unified verification command/output.
+  - `README.md` make shortcut list includes `run-ink-verify`.
+  - `README.md` outputs section notes `verification_summary.csv`.
+- Verified end-to-end:
+  - `python -m forgeflow.core.verification.runner --config ForgeFlowApps/ink_diffusion/config/verification.json`
+  - `mingw32-make run-ink-verify`
+- Generated summary:
+  - `ForgeFlowApps/ink_diffusion/output/verification_summary.csv`
+  - all steps `PASS`, overall `PASS`.
+- Upgraded time convergence script with Richardson/triplet observed-order estimation:
+  - updated `ForgeFlowApps/ink_diffusion/scripts/run_convergence_study.py`
+  - added columns:
+    - `observed_order_l2_richardson`
+    - `observed_order_linf_richardson`
+  - uses adjacent triplets `(dt, dt/r, dt/r^2)` and reports order on middle level.
+- Updated app docs:
+  - `ForgeFlowApps/ink_diffusion/README.md` now documents reference-order vs Richardson-order fields.
+- Expanded app README with a compact variable cheat-sheet and "minimal read path":
+  - clarified key physics/numerics fields (`dt`, `dx/dy`, `kappa`, `stable_cfl`, `mass_delta_abs`, `L2/Linf`).
+  - marked Richardson order as primary acceptance signal and reference-based order as trend-only.
+- Added app-local multi-kappa data generation pipeline:
+  - `ForgeFlowApps/ink_diffusion/scripts/build_multi_kappa_trajectories.py`
+  - runs simulation for a kappa set, auto-selects stable `dt` by CFL safety, and writes:
+    - `ForgeFlowApps/ink_diffusion/output/multi_kappa/trajectory_kappa_*.csv`
+    - `ForgeFlowApps/ink_diffusion/output/multi_kappa/manifest.csv`
+- Added app-local kappa-aware surrogate dataset builder:
+  - `ForgeFlowApps/ink_diffusion/scripts/build_multi_kappa_surrogate_data.py`
+  - reads multi-kappa manifest and exports:
+    - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_train.csv`
+    - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_infer_id.csv`
+    - `ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_infer_ood.csv`
+- Added kappa-conditioned adapter and run configs:
+  - adapter: `ForgeFlowApps/ink_diffusion/adapters/ink_surrogate_kappa_adapter.py`
+  - configs:
+    - `ForgeFlowApps/ink_diffusion/config/surrogate_kappa_id_run.json`
+    - `ForgeFlowApps/ink_diffusion/config/surrogate_kappa_ood_run.json`
+- Added Makefile targets:
+  - `build-ink-multi-kappa-trajectories`
+  - `build-ink-multi-kappa-data`
+  - `run-ink-surrogate-kappa-id`
+  - `run-ink-surrogate-kappa-ood`
+- Updated docs:
+  - `ForgeFlowApps/ink_diffusion/README.md` with multi-kappa generation and kappa-aware surrogate commands.
+  - `README.md` quick-run and make shortcuts updated.
+- Verified with quick smoke commands:
+  - `python ForgeFlowApps/ink_diffusion/scripts/build_multi_kappa_trajectories.py --kappas 0.05 0.1 --total-time 0.4`
+  - `python ForgeFlowApps/ink_diffusion/scripts/build_multi_kappa_surrogate_data.py --spatial-stride 10`
+  - `python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_kappa_id_run.json`
+  - `python main.py --config ForgeFlowApps/ink_diffusion/config/surrogate_kappa_ood_run.json`
+- Added rollout prediction evaluation script:
+  - `ForgeFlowApps/ink_diffusion/scripts/run_surrogate_rollout_eval.py`
+  - trains surrogate from config train CSV and evaluates multi-step rollout against trajectory truth.
+  - writes:
+    - `ForgeFlowApps/ink_diffusion/output/surrogate_rollout_steps.csv`
+    - `ForgeFlowApps/ink_diffusion/output/surrogate_rollout_summary.csv`
+- Added Makefile target:
+  - `run-ink-rollout`
+- Updated docs:
+  - `ForgeFlowApps/ink_diffusion/README.md` rollout commands (base + kappa-aware).
+  - `README.md` includes rollout command and make shortcut.
+- Verified rollout:
+  - `python ForgeFlowApps/ink_diffusion/scripts/run_surrogate_rollout_eval.py --rollout-steps 20`
+  - `python ForgeFlowApps/ink_diffusion/scripts/run_surrogate_rollout_eval.py --config ForgeFlowApps/ink_diffusion/config/surrogate_kappa_id_run.json --trajectory ForgeFlowApps/ink_diffusion/output/multi_kappa/trajectory_kappa_0p1.csv --rollout-steps 20`
+  - `mingw32-make run-ink-rollout`
+- Extended plotting report script:
+  - updated `ForgeFlowApps/ink_diffusion/scripts/plot_report.py`
+  - added rollout visualization (`rollout_report.png`) from rollout step/summary CSVs.
+  - added multi-kappa visualization (`multi_kappa_report.png`) from multi-kappa manifest + trajectory finals.
+- Verified plotting:
+  - `python ForgeFlowApps/ink_diffusion/scripts/plot_report.py`
+  - generated:
+    - `ForgeFlowApps/ink_diffusion/output/report/simulation_report.png`
+    - `ForgeFlowApps/ink_diffusion/output/report/surrogate_report.png`
+    - `ForgeFlowApps/ink_diffusion/output/report/rollout_report.png`
+    - `ForgeFlowApps/ink_diffusion/output/report/multi_kappa_report.png`
+- Started heat benchmark practice app (step 1: initial condition only):
+  - scaffolded `ForgeFlowApps/heat_periodic/` with `data/processed`, `scripts`, `output`.
+  - added initial-condition generator:
+    - `ForgeFlowApps/heat_periodic/scripts/build_initial_csv.py`
+    - analytic init: `u(x,y,0)=sin(2*pi*x)*sin(2*pi*y)`
+  - generated:
+    - `ForgeFlowApps/heat_periodic/data/processed/initial.csv` (100x100)
+- Heat benchmark step 2 started (PDE simulation config):
+  - added `ForgeFlowApps/heat_periodic/config/run.json`
+  - PDE assumption in this app:
+    - `u_t = kappa * (u_xx + u_yy)` with periodic boundary
+  - run config currently reuses app-local ink diffusion solver path:
+    - adapter: `ForgeFlowApps.ink_diffusion.adapters.ink_grid_adapter:InkGridAdapter`
+    - model: `ForgeFlowApps.ink_diffusion.models.ink_diffusion_explicit:InkDiffusionExplicitSimulator`
+  - verified run:
+    - `python main.py --config ForgeFlowApps/heat_periodic/config/run.json`
+    - output files:
+      - `ForgeFlowApps/heat_periodic/output/trajectory.csv`
+      - `ForgeFlowApps/heat_periodic/output/eval_report.csv`
+- Heat benchmark step 3 (app-local adapter):
+  - added:
+    - `ForgeFlowApps/heat_periodic/adapters/heat_grid_adapter.py`
+    - `ForgeFlowApps/heat_periodic/adapters/__init__.py`
+  - updated adapter ref in:
+    - `ForgeFlowApps/heat_periodic/config/run.json`
+  - re-verified run:
+    - `python main.py --config ForgeFlowApps/heat_periodic/config/run.json` -> `PASS`
+- Heat benchmark step 4 (time convergence vs exact mode):
+  - added:
+    - `ForgeFlowApps/heat_periodic/scripts/run_exact_convergence_study.py`
+  - added Makefile target:
+    - `run-heat-exact-convergence`
+  - script reports two error views:
+    - `*_exact_semidiscrete` (recommended for clean temporal-order check)
+    - `*_exact_continuous` (includes fixed spatial bias at current grid spacing)
+  - verified:
+    - `python ForgeFlowApps/heat_periodic/scripts/run_exact_convergence_study.py`
+    - `mingw32-make run-heat-exact-convergence`
+  - output:
+    - `ForgeFlowApps/heat_periodic/output/exact_convergence_report.csv`
+  - observed temporal order (semidiscrete columns):
+    - around `p ~= 1.00` for both L2/Linf, matching explicit Euler time order.
+- Heat benchmark step 5 (spatial convergence vs exact solution):
+  - added:
+    - `ForgeFlowApps/heat_periodic/scripts/run_exact_spatial_convergence_study.py`
+  - added Makefile target:
+    - `run-heat-exact-spatial-convergence`
+  - verified:
+    - `python ForgeFlowApps/heat_periodic/scripts/run_exact_spatial_convergence_study.py`
+    - `mingw32-make run-heat-exact-spatial-convergence`
+  - output:
+    - `ForgeFlowApps/heat_periodic/output/exact_spatial_convergence_report.csv`
+  - observed spatial order on finest pair:
+    - around `p_l2 ~= 1.90`, `p_linf ~= 1.90` (close to expected second-order trend).
+- Heat benchmark step 6 (supervised surrogate baseline):
+  - added dataset builder:
+    - `ForgeFlowApps/heat_periodic/scripts/build_surrogate_datasets.py`
+  - added adapter:
+    - `ForgeFlowApps/heat_periodic/adapters/heat_surrogate_adapter.py`
+  - added config:
+    - `ForgeFlowApps/heat_periodic/config/surrogate_run.json`
+  - added Makefile targets:
+    - `build-heat-surrogate-data`
+    - `run-heat-surrogate`
+  - verified:
+    - `python ForgeFlowApps/heat_periodic/scripts/build_surrogate_datasets.py --spatial-stride 5`
+    - `python main.py --config ForgeFlowApps/heat_periodic/config/surrogate_run.json`
+    - `mingw32-make run-heat-surrogate`
+  - run result:
+    - `status=PASS`
+    - `val_mae=0.000000`
+    - `val_rmse=0.000000`
+    - `val_maxae=0.000000`
+- Heat benchmark step 7 (surrogate rollout prediction):
+  - added:
+    - `ForgeFlowApps/heat_periodic/scripts/run_surrogate_rollout_eval.py`
+  - added Makefile target:
+    - `run-heat-rollout`
+  - verified:
+    - `python ForgeFlowApps/heat_periodic/scripts/run_surrogate_rollout_eval.py --rollout-steps 20`
+    - `mingw32-make run-heat-rollout`
+  - outputs:
+    - `ForgeFlowApps/heat_periodic/output/surrogate_rollout_steps.csv`
+    - `ForgeFlowApps/heat_periodic/output/surrogate_rollout_summary.csv`
+  - rollout result:
+    - `status=PASS`
+    - mean/last rollout errors near machine precision for this linear heat setup.
+- Heat benchmark step 8 (visual reports):
+  - added plotting script:
+    - `ForgeFlowApps/heat_periodic/scripts/plot_report.py`
+  - added Makefile target:
+    - `plot-heat-report`
+  - generated plots:
+    - `ForgeFlowApps/heat_periodic/output/report/simulation_report.png`
+    - `ForgeFlowApps/heat_periodic/output/report/surrogate_report.png`
+    - `ForgeFlowApps/heat_periodic/output/report/rollout_report.png`
+  - verified:
+    - `python ForgeFlowApps/heat_periodic/scripts/plot_report.py`
+    - `mingw32-make plot-heat-report`
+- Heat benchmark step 9 (long-time visibility update):
+  - added/used longer-time config:
+    - `ForgeFlowApps/heat_periodic/config/run_long_t.json`
+    - total horizon increased via larger `steps * dt` (`1500 * 0.0002 = 0.3`)
+  - plotting update:
+    - `ForgeFlowApps/heat_periodic/scripts/plot_report.py`
+    - simulation snapshots now use a shared color scale (`vmin/vmax`) to make decay visually obvious.
+  - Makefile targets added:
+    - `run-heat-long`
+    - `plot-heat-long`
+  - verified:
+    - `python main.py --config ForgeFlowApps/heat_periodic/config/run_long_t.json`
+    - `python ForgeFlowApps/heat_periodic/scripts/plot_report.py --trajectory ForgeFlowApps/heat_periodic/output/trajectory_long_t.csv --simulation-eval ForgeFlowApps/heat_periodic/output/eval_report_long_t.csv --out-dir ForgeFlowApps/heat_periodic/output/report_long_t`
+  - observed:
+    - `max|u|` drops from `1.0` at step `0` to about `0.3059` at step `1500`.

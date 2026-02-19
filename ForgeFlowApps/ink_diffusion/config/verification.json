@@ -1,0 +1,38 @@
+{
+  "task": "ink_diffusion_verification",
+  "summary_csv": "../output/verification_summary.csv",
+  "steps": [
+    {
+      "name": "time_convergence",
+      "command": [
+        "{python}",
+        "ForgeFlowApps/ink_diffusion/scripts/run_convergence_study.py"
+      ],
+      "report_csv": "../output/convergence_report.csv",
+      "status_field": "status",
+      "pass_value": "PASS"
+    },
+    {
+      "name": "spatial_convergence",
+      "command": [
+        "{python}",
+        "ForgeFlowApps/ink_diffusion/scripts/run_spatial_convergence_study.py"
+      ],
+      "report_csv": "../output/spatial_convergence_report.csv",
+      "status_field": "status",
+      "pass_value": "PASS"
+    },
+    {
+      "name": "surrogate_eval",
+      "command": [
+        "{python}",
+        "main.py",
+        "--config",
+        "ForgeFlowApps/ink_diffusion/config/surrogate_run.json"
+      ],
+      "report_csv": "../output/surrogate_eval_report.csv",
+      "status_field": "status",
+      "pass_value": "PASS"
+    }
+  ]
+}

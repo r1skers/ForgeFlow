@@ -1,0 +1,28 @@
+{
+  "mode": "supervised",
+  "task": "ink_diffusion_surrogate_kappa_id",
+  "adapter_ref": "ForgeFlowApps.ink_diffusion.adapters.ink_surrogate_kappa_adapter:InkSurrogateKappaAdapter",
+  "model_ref": "ForgeFlowApps.linear_xy.models.linear_regression:LinearDynamicsRegressor",
+  "paths": {
+    "train_csv": "ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_train.csv",
+    "infer_csv": "ForgeFlowApps/ink_diffusion/data/processed/surrogate_kappa_infer_id.csv",
+    "predictions_csv": "ForgeFlowApps/ink_diffusion/output/surrogate_kappa_id_predictions.csv",
+    "eval_report_csv": "ForgeFlowApps/ink_diffusion/output/surrogate_kappa_id_eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": true,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 50000
+  },
+  "eval_policy": {
+    "val_mae_max": 0.000001,
+    "val_rmse_max": 0.000001,
+    "val_maxae_max": 0.00001
+  }
+}

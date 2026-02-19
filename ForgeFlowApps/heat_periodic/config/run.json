@@ -1,0 +1,23 @@
+{
+  "mode": "simulation",
+  "task": "heat_periodic",
+  "adapter_ref": "ForgeFlowApps.heat_periodic.adapters.heat_grid_adapter:HeatGridAdapter",
+  "model_ref": "ForgeFlowApps.ink_diffusion.models.ink_diffusion_explicit:InkDiffusionExplicitSimulator",
+  "paths": {
+    "initial_csv": "ForgeFlowApps/heat_periodic/data/processed/initial.csv",
+    "trajectory_csv": "ForgeFlowApps/heat_periodic/output/trajectory.csv",
+    "eval_report_csv": "ForgeFlowApps/heat_periodic/output/eval_report.csv"
+  },
+  "simulation": {
+    "steps": 200,
+    "dt": 0.0001,
+    "dx": 0.01,
+    "dy": 0.01,
+    "kappa": 0.05,
+    "boundary": "periodic",
+    "strict_cfl": true,
+    "mass_tolerance": 0.0001,
+    "grid_nx": 100,
+    "grid_ny": 100
+  }
+}

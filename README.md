@@ -116,12 +116,18 @@ Ink diffusion surrogate rollout prediction:
 python ForgeFlowApps/ink_diffusion/scripts/run_surrogate_rollout_eval.py
 ```
 
-Heat kappa inverse (stage 1 data + stage 2 ID/OOD inference):
+Heat kappa inverse (recommended minimal run):
 
 ```bash
 python ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/scripts/build_dataset.py
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id.json
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood.json
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/summarize_infer_metrics.py --skip-missing
+```
+
+Heat kappa inverse (full robustness report: noise + plots + markdown):
+
+```bash
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id_noise_0p01.json
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id_noise_0p03.json
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood_noise_0p01.json

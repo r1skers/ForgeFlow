@@ -495,3 +495,11 @@ Last updated: 2026-02-20
     - `r = y_true - y_pred`
     - `mu = mean(r_val)`, `sigma = std(r_val)`
     - anomaly if `abs(r - mu) > sigma_k * sigma`
+- Documentation polish pass for `heat_kappa_inverse`:
+  - updated:
+    - `README.md`
+    - `ForgeFlowApps/heat_kappa_inverse/README.md`
+  - changes:
+    - split quick-run docs into minimal clean flow vs full robustness flow.
+    - aligned robustness steps with generated artifacts (`summary.md`, sigma sweep outputs).
+    - added one-command `mingw32-make run-heat-kappa-noise-sweep` reference in app README.

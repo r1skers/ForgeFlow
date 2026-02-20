@@ -30,15 +30,10 @@ Outputs:
 
 ## Stage 2: Inverse Regression
 
-ID inference run:
+Run clean ID/OOD:
 
 ```bash
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id.json
-```
-
-OOD inference run:
-
-```bash
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood.json
 ```
 
@@ -46,8 +41,6 @@ Summarize ID/OOD infer metrics:
 
 ```bash
 python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/summarize_infer_metrics.py --skip-missing
-python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py
-python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py
 ```
 
 Run noise robustness sweep (1% / 3% on ID and OOD):
@@ -59,6 +52,14 @@ python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/r
 python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood_noise_0p03.json
 python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/summarize_infer_metrics.py --skip-missing
 python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/plot_kappa_scatter.py
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py
+```
+
+One-command equivalent (after dataset build):
+
+```bash
+mingw32-make run-heat-kappa-noise-sweep
 ```
 
 Key outputs:

@@ -55,3 +55,11 @@ ForgeFlowApps/heat_periodic/data/processed/surrogate_infer.csv
 ForgeFlowApps/heat_periodic/output/exact_convergence_tmp.csv
 ForgeFlowApps/heat_periodic/output/report/*.png
 ForgeFlowApps/heat_periodic/output/report_long_t/*.png
+ForgeFlowApps/heat_kappa_inverse/data/processed/train.csv
+ForgeFlowApps/heat_kappa_inverse/data/processed/infer_id.csv
+ForgeFlowApps/heat_kappa_inverse/data/processed/infer_ood.csv
+ForgeFlowApps/heat_kappa_inverse/data/processed/infer_id_noise_*.csv
+ForgeFlowApps/heat_kappa_inverse/data/processed/infer_ood_noise_*.csv
+ForgeFlowApps/heat_kappa_inverse/output/*.png
+ForgeFlowApps/heat_kappa_inverse/output/summary.md
+ForgeFlowApps/heat_kappa_inverse/output/sigma_k_recommendation.md

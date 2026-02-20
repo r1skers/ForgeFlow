@@ -24,8 +24,19 @@ HEAT_SURROGATE_CONFIG := ForgeFlowApps/heat_periodic/config/surrogate_run.json
 HEAT_ROLLOUT_SCRIPT := ForgeFlowApps/heat_periodic/scripts/run_surrogate_rollout_eval.py
 HEAT_PLOT_SCRIPT := ForgeFlowApps/heat_periodic/scripts/plot_report.py
 HEAT_LONG_CONFIG := ForgeFlowApps/heat_periodic/config/run_long_t.json
+HEAT_KAPPA_DATA_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/scripts/build_dataset.py
+HEAT_KAPPA_ID_CONFIG := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id.json
+HEAT_KAPPA_OOD_CONFIG := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood.json
+HEAT_KAPPA_ID_NOISE_1_CONFIG := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id_noise_0p01.json
+HEAT_KAPPA_ID_NOISE_3_CONFIG := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id_noise_0p03.json
+HEAT_KAPPA_OOD_NOISE_1_CONFIG := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood_noise_0p01.json
+HEAT_KAPPA_OOD_NOISE_3_CONFIG := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood_noise_0p03.json
+HEAT_KAPPA_INFER_REPORT_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/summarize_infer_metrics.py
+HEAT_KAPPA_SCATTER_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/plot_kappa_scatter.py
+HEAT_KAPPA_SUMMARY_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py
+HEAT_KAPPA_SIGMA_SWEEP_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py
 
-.PHONY: run-linear run-dem run-poly4 run-solar run-ink build-ink-samples build-ink-surrogate-data build-ink-multi-kappa-trajectories build-ink-multi-kappa-data run-ink-surrogate run-ink-surrogate-kappa-id run-ink-surrogate-kappa-ood run-ink-rollout plot-ink-report run-ink-convergence run-ink-spatial-convergence run-ink-verify run-heat-long run-heat-exact-convergence run-heat-exact-spatial-convergence build-heat-surrogate-data run-heat-surrogate run-heat-rollout plot-heat-report plot-heat-long smoke
+.PHONY: run-linear run-dem run-poly4 run-solar run-ink build-ink-samples build-ink-surrogate-data build-ink-multi-kappa-trajectories build-ink-multi-kappa-data run-ink-surrogate run-ink-surrogate-kappa-id run-ink-surrogate-kappa-ood run-ink-rollout plot-ink-report run-ink-convergence run-ink-spatial-convergence run-ink-verify run-heat-long run-heat-exact-convergence run-heat-exact-spatial-convergence build-heat-surrogate-data run-heat-surrogate run-heat-rollout plot-heat-report plot-heat-long build-heat-kappa-data run-heat-kappa-id run-heat-kappa-ood run-heat-kappa-id-noise-1 run-heat-kappa-id-noise-3 run-heat-kappa-ood-noise-1 run-heat-kappa-ood-noise-3 report-heat-kappa-infer plot-heat-kappa-scatter report-heat-kappa-summary report-heat-kappa-sigma-sweep run-heat-kappa-noise-sweep smoke
 
 run-linear:
 	$(PYTHON) main.py --config $(LINEAR_CONFIG)
@@ -101,5 +112,48 @@ plot-heat-report:
 
 plot-heat-long:
 	$(PYTHON) $(HEAT_PLOT_SCRIPT) --trajectory ForgeFlowApps/heat_periodic/output/trajectory_long_t.csv --simulation-eval ForgeFlowApps/heat_periodic/output/eval_report_long_t.csv --out-dir ForgeFlowApps/heat_periodic/output/report_long_t
+
+build-heat-kappa-data:
+	$(PYTHON) $(HEAT_KAPPA_DATA_SCRIPT)
+
+run-heat-kappa-id:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_ID_CONFIG)
+
+run-heat-kappa-ood:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_OOD_CONFIG)
+
+run-heat-kappa-id-noise-1:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_ID_NOISE_1_CONFIG)
+
+run-heat-kappa-id-noise-3:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_ID_NOISE_3_CONFIG)
+
+run-heat-kappa-ood-noise-1:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_OOD_NOISE_1_CONFIG)
+
+run-heat-kappa-ood-noise-3:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_OOD_NOISE_3_CONFIG)
+
+report-heat-kappa-infer:
+	$(PYTHON) $(HEAT_KAPPA_INFER_REPORT_SCRIPT) --skip-missing
+
+plot-heat-kappa-scatter:
+	$(PYTHON) $(HEAT_KAPPA_SCATTER_SCRIPT)
+
+report-heat-kappa-summary:
+	$(PYTHON) $(HEAT_KAPPA_SUMMARY_SCRIPT)
+
+report-heat-kappa-sigma-sweep:
+	$(PYTHON) $(HEAT_KAPPA_SIGMA_SWEEP_SCRIPT)
+
+run-heat-kappa-noise-sweep:
+	$(PYTHON) main.py --config $(HEAT_KAPPA_ID_NOISE_1_CONFIG)
+	$(PYTHON) main.py --config $(HEAT_KAPPA_ID_NOISE_3_CONFIG)
+	$(PYTHON) main.py --config $(HEAT_KAPPA_OOD_NOISE_1_CONFIG)
+	$(PYTHON) main.py --config $(HEAT_KAPPA_OOD_NOISE_3_CONFIG)
+	$(PYTHON) $(HEAT_KAPPA_INFER_REPORT_SCRIPT) --skip-missing
+	$(PYTHON) $(HEAT_KAPPA_SCATTER_SCRIPT)
+	$(PYTHON) $(HEAT_KAPPA_SUMMARY_SCRIPT)
+	$(PYTHON) $(HEAT_KAPPA_SIGMA_SWEEP_SCRIPT)
 
 smoke: run-linear run-dem

@@ -38,6 +38,33 @@ Both styles are supported:
 - `supervised` (default): split -> fit/predict -> metrics/anomaly -> inference output
 - `simulation`: initial state -> time stepping simulation -> trajectory/eval report
 
+## Quick Start (Install + Run)
+
+Prerequisite: Python 3.10+.
+
+Using `venv`:
+
+```bash
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Using Conda:
+
+```bash
+conda create -n forgeflow python=3.13 -y
+conda activate forgeflow
+pip install -r requirements.txt
+```
+
+Sanity run (linear baseline):
+
+```bash
+python main.py --config ForgeFlowApps/linear_xy/config/run.json
+```
+
 ## Quick Run
 
 Default run (same as linear app config):
@@ -89,6 +116,22 @@ Ink diffusion surrogate rollout prediction:
 python ForgeFlowApps/ink_diffusion/scripts/run_surrogate_rollout_eval.py
 ```
 
+Heat kappa inverse (stage 1 data + stage 2 ID/OOD inference):
+
+```bash
+python ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/scripts/build_dataset.py
+python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id.json
+python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood.json
+python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id_noise_0p01.json
+python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id_noise_0p03.json
+python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood_noise_0p01.json
+python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood_noise_0p03.json
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/summarize_infer_metrics.py --skip-missing
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/plot_kappa_scatter.py
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py
+python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py
+```
+
 Optional `make` shortcuts:
 
 ```bash
@@ -106,6 +149,14 @@ make run-ink-rollout
 make build-ink-surrogate-data
 make run-ink-surrogate
 make plot-ink-report
+make build-heat-kappa-data
+make run-heat-kappa-id
+make run-heat-kappa-ood
+make run-heat-kappa-noise-sweep
+make report-heat-kappa-infer
+make plot-heat-kappa-scatter
+make report-heat-kappa-summary
+make report-heat-kappa-sigma-sweep
 ```
 
 If `make` is unavailable on Windows, use the equivalent `python main.py --config ...` commands above, or run `mingw32-make`.

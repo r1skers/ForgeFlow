@@ -1,0 +1,31 @@
+{
+  "seed": 42,
+  "grid": {
+    "nx": 64,
+    "ny": 64
+  },
+  "simulation": {
+    "dt": 0.0002,
+    "t1_min": 0.03,
+    "t1_max": 0.08,
+    "t2_min": 0.16,
+    "t2_max": 0.30
+  },
+  "kappa_ranges": {
+    "train": [0.01, 0.12],
+    "infer_id": [0.01, 0.12],
+    "infer_ood": [0.13, 0.18]
+  },
+  "sizes": {
+    "train": 220,
+    "infer_id": 60,
+    "infer_ood": 60
+  },
+  "noise_levels": [0.01, 0.03],
+  "paths": {
+    "train_csv": "ForgeFlowApps/heat_kappa_inverse/data/processed/train.csv",
+    "infer_id_csv": "ForgeFlowApps/heat_kappa_inverse/data/processed/infer_id.csv",
+    "infer_ood_csv": "ForgeFlowApps/heat_kappa_inverse/data/processed/infer_ood.csv",
+    "manifest_csv": "ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/output/manifest.csv"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "mode": "supervised",
+  "task": "heat_kappa_inverse_ood_noise_0p01",
+  "adapter_ref": "ForgeFlowApps.heat_kappa_inverse.stage2_inverse.adapters.kappa_inverse_adapter:HeatKappaInverseAdapter",
+  "model_ref": "ForgeFlowApps.heat_kappa_inverse.stage2_inverse.models.kappa_linear_regression:KappaLinearRegressor",
+  "paths": {
+    "train_csv": "ForgeFlowApps/heat_kappa_inverse/data/processed/train.csv",
+    "infer_csv": "ForgeFlowApps/heat_kappa_inverse/data/processed/infer_ood_noise_0p01.csv",
+    "predictions_csv": "ForgeFlowApps/heat_kappa_inverse/output/predictions_ood_noise_0p01.csv",
+    "eval_report_csv": "ForgeFlowApps/heat_kappa_inverse/output/eval_report_ood_noise_0p01.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": true,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 5000
+  },
+  "eval_policy": {
+    "val_mae_max": 0.003,
+    "val_rmse_max": 0.004,
+    "val_maxae_max": 0.01
+  }
+}
+

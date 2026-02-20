@@ -1,6 +1,6 @@
 # ForgeFlow Log
 
-Last updated: 2026-02-19
+Last updated: 2026-02-20
 
 ## 2026-02-11
 - Initialized project log file.
@@ -397,3 +397,101 @@ Last updated: 2026-02-19
     - `python ForgeFlowApps/heat_periodic/scripts/plot_report.py --trajectory ForgeFlowApps/heat_periodic/output/trajectory_long_t.csv --simulation-eval ForgeFlowApps/heat_periodic/output/eval_report_long_t.csv --out-dir ForgeFlowApps/heat_periodic/output/report_long_t`
   - observed:
     - `max|u|` drops from `1.0` at step `0` to about `0.3059` at step `1500`.
+
+## 2026-02-20
+- Packaging/reproducibility delivery polish:
+  - added dependency file:
+    - `requirements.txt` (`numpy`, `matplotlib`)
+  - updated root README with a real install-and-run path:
+    - added `Quick Start (Install + Run)` section with both `venv` and Conda setup
+    - included one sanity command:
+      - `python main.py --config ForgeFlowApps/linear_xy/config/run.json`
+- New app scaffold: `heat_kappa_inverse` (two-stage inverse workflow):
+  - added stage 1 generator:
+    - config: `ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/config/generate.json`
+    - script: `ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/scripts/build_dataset.py`
+    - outputs:
+      - `ForgeFlowApps/heat_kappa_inverse/data/processed/train.csv`
+      - `ForgeFlowApps/heat_kappa_inverse/data/processed/infer_id.csv`
+      - `ForgeFlowApps/heat_kappa_inverse/data/processed/infer_ood.csv`
+  - added stage 2 inverse model:
+    - adapter: `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/adapters/kappa_inverse_adapter.py`
+    - model: `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/models/kappa_linear_regression.py`
+    - configs:
+      - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id.json`
+      - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood.json`
+  - added docs and make targets:
+    - `ForgeFlowApps/heat_kappa_inverse/README.md`
+    - `build-heat-kappa-data`, `run-heat-kappa-id`, `run-heat-kappa-ood`
+  - verified:
+    - `python ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/scripts/build_dataset.py`
+    - `python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_id.json`
+    - `python main.py --config ForgeFlowApps/heat_kappa_inverse/stage2_inverse/config/run_ood.json`
+  - observed:
+    - ID validation: `val_mae=0.000005`, `val_rmse=0.000006`, `status=PASS`.
+- Added infer-side ID/OOD metrics summary for kappa inverse:
+  - script:
+    - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/summarize_infer_metrics.py`
+  - output:
+    - `ForgeFlowApps/heat_kappa_inverse/output/infer_metrics_report.csv`
+  - make target:
+    - `report-heat-kappa-infer`
+  - purpose:
+    - quantify infer quality (`mae/rmse/maxae`) and anomaly ratio on ID vs OOD splits.
+- Added noise robustness expansion for heat kappa inverse (1% / 3%):
+  - stage1 generator update:
+    - `ForgeFlowApps/heat_kappa_inverse/stage1_data_gen/scripts/build_dataset.py`
+    - now emits noisy infer sets:
+      - `infer_id_noise_0p01.csv`, `infer_id_noise_0p03.csv`
+      - `infer_ood_noise_0p01.csv`, `infer_ood_noise_0p03.csv`
+    - manifest now records `noise_levels` and `noisy_files`.
+  - stage2 configs added:
+    - `run_id_noise_0p01.json`, `run_id_noise_0p03.json`
+    - `run_ood_noise_0p01.json`, `run_ood_noise_0p03.json`
+  - infer summary script upgraded:
+    - `summarize_infer_metrics.py` now supports multiple splits and `--skip-missing`.
+  - added scatter report script:
+    - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/plot_kappa_scatter.py`
+    - output: `ForgeFlowApps/heat_kappa_inverse/output/kappa_scatter_report.png`
+  - make targets added:
+    - `run-heat-kappa-id-noise-1`
+    - `run-heat-kappa-id-noise-3`
+    - `run-heat-kappa-ood-noise-1`
+    - `run-heat-kappa-ood-noise-3`
+    - `run-heat-kappa-noise-sweep`
+    - `plot-heat-kappa-scatter`
+  - verified:
+    - `mingw32-make build-heat-kappa-data`
+    - `mingw32-make run-heat-kappa-id`
+    - `mingw32-make run-heat-kappa-ood`
+    - `mingw32-make run-heat-kappa-noise-sweep`
+- Added automatic markdown summary generator for kappa inverse outputs:
+  - script:
+    - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py`
+  - output:
+    - `ForgeFlowApps/heat_kappa_inverse/output/summary.md`
+  - make target:
+    - `report-heat-kappa-summary`
+  - integrated into:
+    - `run-heat-kappa-noise-sweep`
+- Added sigma-threshold calibration sweep for anomaly control:
+  - script:
+    - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py`
+  - outputs:
+    - `ForgeFlowApps/heat_kappa_inverse/output/sigma_k_sweep_report.csv`
+    - `ForgeFlowApps/heat_kappa_inverse/output/sigma_k_recommendation.md`
+  - make target:
+    - `report-heat-kappa-sigma-sweep`
+  - integrated into:
+    - `run-heat-kappa-noise-sweep`
+  - verified:
+    - `mingw32-make report-heat-kappa-sigma-sweep`
+  - observed:
+    - recommended `sigma_k=4.00` under current selection rule.
+- Added method formulas to auto summary markdown:
+  - updated:
+    - `ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py`
+  - summary now includes explicit residual/sigma-rule equations:
+    - `r = y_true - y_pred`
+    - `mu = mean(r_val)`, `sigma = std(r_val)`
+    - anomaly if `abs(r - mu) > sigma_k * sigma`

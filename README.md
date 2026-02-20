@@ -138,6 +138,30 @@ python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_
 python ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py
 ```
 
+USGS real-data water temperature:
+
+```bash
+python ForgeFlowApps/usgs_water_temp/scripts/build_usgs_dataset.py --site-id USGS-01491000 --start-date 2023-01-01 --end-date 2025-12-31 --train-until 2024-12-31
+python main.py --config ForgeFlowApps/usgs_water_temp/config/run.json
+```
+
+USGS minimal A/B feature comparison:
+
+```bash
+python main.py --config ForgeFlowApps/usgs_water_temp/config/run_temp_only.json
+python main.py --config ForgeFlowApps/usgs_water_temp/config/run_full_features.json
+python ForgeFlowApps/usgs_water_temp/scripts/compare_feature_sets.py
+python ForgeFlowApps/usgs_water_temp/scripts/run_multi_site_eval.py
+```
+
+Heat1D realistic prediction benchmark:
+
+```bash
+python ForgeFlowApps/heat1d_realistic_predict/scripts/build_dataset.py
+python ForgeFlowApps/heat1d_realistic_predict/scripts/run_convergence_study.py
+python main.py --config ForgeFlowApps/heat1d_realistic_predict/config/run.json
+```
+
 Optional `make` shortcuts:
 
 ```bash
@@ -163,6 +187,14 @@ make report-heat-kappa-infer
 make plot-heat-kappa-scatter
 make report-heat-kappa-summary
 make report-heat-kappa-sigma-sweep
+make build-usgs-water-temp-data
+make run-usgs-water-temp
+make run-usgs-water-temp-ab
+make report-usgs-water-temp-ab
+make run-usgs-water-temp-multi-site
+make build-heat1d-realistic-data
+make run-heat1d-realistic-convergence
+make run-heat1d-realistic
 ```
 
 If `make` is unavailable on Windows, use the equivalent `python main.py --config ...` commands above, or run `mingw32-make`.

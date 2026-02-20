@@ -1,0 +1,65 @@
+{
+  "random_seed": 42,
+  "grid": {
+    "nx": 32,
+    "dx": 1.0
+  },
+  "time": {
+    "steps": 400,
+    "dt": 0.12
+  },
+  "dynamics": {
+    "kappa_mean": 0.28,
+    "kappa_variation": 0.2,
+    "advection_v": 0.15,
+    "process_noise_std": 0.01,
+    "source_amp": 0.12,
+    "source_freq_hz": 0.05,
+    "source_center_x": 16.0,
+    "source_width": 5.5
+  },
+  "initial_condition": {
+    "baseline": 0.0,
+    "peaks": [
+      {
+        "center_x": 8.0,
+        "width": 2.8,
+        "amplitude": 1.2
+      },
+      {
+        "center_x": 22.0,
+        "width": 3.6,
+        "amplitude": -0.9
+      }
+    ]
+  },
+  "observation": {
+    "gaussian_std": 0.03,
+    "heavy_tail_std": 0.08,
+    "heavy_tail_prob": 0.05,
+    "missing_prob": 0.03,
+    "missing_block_prob": 0.01,
+    "missing_block_len_min": 3,
+    "missing_block_len_max": 10,
+    "outlier_prob": 0.01,
+    "outlier_scale": 8.0,
+    "stuck_prob": 0.004,
+    "stuck_len_min": 3,
+    "stuck_len_max": 8,
+    "drift_std": 0.04,
+    "quantization_step": 0.01,
+    "clip_min": -3.0,
+    "clip_max": 3.0
+  },
+  "split": {
+    "train_until_step": 300
+  },
+  "outputs": {
+    "train_csv": "ForgeFlowApps/heat1d_realistic_predict/data/processed/train.csv",
+    "infer_csv": "ForgeFlowApps/heat1d_realistic_predict/data/infer/infer.csv",
+    "true_trajectory_csv": "ForgeFlowApps/heat1d_realistic_predict/output/trajectory_true.csv",
+    "obs_trajectory_csv": "ForgeFlowApps/heat1d_realistic_predict/output/trajectory_observed.csv",
+    "manifest_json": "ForgeFlowApps/heat1d_realistic_predict/output/manifest.json"
+  }
+}
+

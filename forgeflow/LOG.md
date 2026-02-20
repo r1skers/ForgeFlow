@@ -503,3 +503,130 @@ Last updated: 2026-02-20
     - split quick-run docs into minimal clean flow vs full robustness flow.
     - aligned robustness steps with generated artifacts (`summary.md`, sigma sweep outputs).
     - added one-command `mingw32-make run-heat-kappa-noise-sweep` reference in app README.
+- New real-data app scaffold: `usgs_water_temp`:
+  - added files:
+    - `ForgeFlowApps/usgs_water_temp/scripts/build_usgs_dataset.py`
+    - `ForgeFlowApps/usgs_water_temp/adapters/usgs_water_temp_adapter.py`
+    - `ForgeFlowApps/usgs_water_temp/config/run.json`
+    - `ForgeFlowApps/usgs_water_temp/README.md`
+  - dataset builder behavior:
+    - pulls USGS `daily` items for one site (`parameter_code=00010`, `statistic_id=00003`)
+    - builds lagged supervised pairs (`temp_t, doy_sin, doy_cos, dt_days -> y`)
+    - writes CSV only:
+      - `ForgeFlowApps/usgs_water_temp/data/processed/train.csv`
+      - `ForgeFlowApps/usgs_water_temp/data/infer/infer.csv`
+  - make/README updates:
+    - `Makefile`: `build-usgs-water-temp-data`, `run-usgs-water-temp`
+    - `README.md`: added USGS quick-run section
+  - verified:
+    - `python ForgeFlowApps/usgs_water_temp/scripts/build_usgs_dataset.py --site-id USGS-01491000 --start-date 2023-01-01 --end-date 2025-12-31 --train-until 2024-12-31`
+    - `python main.py --config ForgeFlowApps/usgs_water_temp/config/run.json`
+  - observed:
+    - fetched features: `983`
+    - usable daily values (Approved): `754`
+    - train rows: `619`
+    - infer rows: `134`
+    - validation: `val_mae=0.992720`, `val_rmse=1.232003`, `status=PASS`
+- USGS feature A/B comparison (temp-only vs seasonal features):
+  - added:
+    - adapter class: `ForgeFlowApps/usgs_water_temp/adapters/usgs_water_temp_adapter.py` (`USGSWaterTempTempOnlyAdapter`)
+    - configs:
+      - `ForgeFlowApps/usgs_water_temp/config/run_temp_only.json`
+      - `ForgeFlowApps/usgs_water_temp/config/run_full_features.json`
+    - report script:
+      - `ForgeFlowApps/usgs_water_temp/scripts/compare_feature_sets.py`
+    - make targets:
+      - `run-usgs-water-temp-temp-only`
+      - `run-usgs-water-temp-full-features`
+      - `report-usgs-water-temp-ab`
+      - `run-usgs-water-temp-ab`
+  - verified:
+    - `python main.py --config ForgeFlowApps/usgs_water_temp/config/run_temp_only.json`
+    - `python main.py --config ForgeFlowApps/usgs_water_temp/config/run_full_features.json`
+    - `python ForgeFlowApps/usgs_water_temp/scripts/compare_feature_sets.py`
+  - observed (`infer` rows `n=363`, includes provisional):
+    - temp-only: `MAE=0.836114`, `RMSE=1.082744`, `MaxAE=3.386629`
+    - full-features: `MAE=0.847357`, `RMSE=1.068040`, `MaxAE=2.960343`
+    - interpretation:
+      - seasonal features reduced `RMSE/MaxAE` but slightly increased `MAE` in this split.
+- USGS case summary (CN/EN):
+  - Chinese: Completed end-to-end real-data workflow (USGS fetch -> supervised sample build -> linear training -> 2025 inference validation). Error scale is about `1 C`; process is usable. A/B showed better `RMSE/MaxAE` but slightly worse `MAE`, so evidence is moderate.
+  - English: Completed end-to-end real-data workflow (USGS fetch -> supervised sample build -> linear training -> 2025 inference validation). Error scale is about `1 C`; process is usable. A/B showed better `RMSE/MaxAE` but slightly worse `MAE`, so evidence is moderate.
+- USGS app update for multi-site data preparation:
+  - updated:
+    - `ForgeFlowApps/usgs_water_temp/scripts/build_usgs_dataset.py`
+    - added output overrides `--train-out`, `--infer-out` to avoid overwriting default files during multi-site pulls.
+  - generated 3-station datasets (with provisional included):
+    - `USGS-01491000`: train `619`, infer `363`
+    - `USGS-13192200`: train `731`, infer `364`
+    - `USGS-02450250`: train `723`, infer `364`
+  - outputs:
+    - `ForgeFlowApps/usgs_water_temp/data/processed/train_USGS-*.csv`
+    - `ForgeFlowApps/usgs_water_temp/data/infer/infer_USGS-*.csv`
+    - `ForgeFlowApps/usgs_water_temp/output/site_pull_v1.csv`
+  - docs:
+    - `ForgeFlowApps/usgs_water_temp/LOG.md` now includes bilingual (`CN/EN`) v1 summary and multi-site pull record.
+- USGS multi-site evaluation pass (3 stations):
+  - added:
+    - `ForgeFlowApps/usgs_water_temp/scripts/run_multi_site_eval.py`
+  - make/README updates:
+    - `Makefile`: `run-usgs-water-temp-multi-site`
+    - `ForgeFlowApps/usgs_water_temp/README.md`: added multi-site replication section
+  - verified:
+    - `python ForgeFlowApps/usgs_water_temp/scripts/run_multi_site_eval.py`
+  - outputs:
+    - `ForgeFlowApps/usgs_water_temp/output/multi_site/site_metrics.csv`
+  - observed (infer metrics):
+    - `USGS-01491000`: `MAE=0.847357`, `RMSE=1.068040`, `MaxAE=2.960343`
+    - `USGS-13192200`: `MAE=0.413245`, `RMSE=0.576381`, `MaxAE=2.422584`
+    - `USGS-02450250`: `MAE=0.823036`, `RMSE=1.109144`, `MaxAE=5.165395`
+- USGS log polish and phase freeze:
+  - updated:
+    - `ForgeFlowApps/usgs_water_temp/LOG.md`
+  - changes:
+    - rewritten as a concise v1 freeze record with clean bilingual conclusions.
+    - added explicit phase decision: close linear first-order track and move next to explicit PDE-focused work.
+- New app: `heat1d_realistic_predict` (prediction-first realistic PDE benchmark):
+  - added:
+    - `ForgeFlowApps/heat1d_realistic_predict/config/generate.json`
+    - `ForgeFlowApps/heat1d_realistic_predict/scripts/build_dataset.py`
+    - `ForgeFlowApps/heat1d_realistic_predict/adapters/heat1d_realistic_adapter.py`
+    - `ForgeFlowApps/heat1d_realistic_predict/config/run.json`
+    - `ForgeFlowApps/heat1d_realistic_predict/README.md`
+    - `ForgeFlowApps/heat1d_realistic_predict/LOG.md`
+  - realism features included:
+    - spatially varying `kappa(x)`, advection term, source forcing, process noise
+    - gaussian + heavy-tail observation noise
+    - random/block missing, outliers, stuck sensors, drift, quantization, clipping
+  - make targets:
+    - `build-heat1d-realistic-data`
+    - `run-heat1d-realistic`
+  - verified:
+    - `python ForgeFlowApps/heat1d_realistic_predict/scripts/build_dataset.py`
+    - `python main.py --config ForgeFlowApps/heat1d_realistic_predict/config/run.json`
+  - observed:
+    - build: `train_rows=8685`, `infer_rows=2853`, `missing_ratio=0.0987`, `stable_cfl=True`
+    - eval: `val_mae=0.085073`, `val_rmse=0.245231`, `val_maxae=3.419060`, `status=PASS`
+- Added convergence validation for `heat1d_realistic_predict`:
+  - added:
+    - `ForgeFlowApps/heat1d_realistic_predict/scripts/run_convergence_study.py`
+  - make/docs updates:
+    - `Makefile`: `run-heat1d-realistic-convergence`
+    - `ForgeFlowApps/heat1d_realistic_predict/README.md` step order now includes convergence before training
+  - verified:
+    - `python ForgeFlowApps/heat1d_realistic_predict/scripts/run_convergence_study.py`
+  - observed:
+    - temporal order (pseudo-truth `dt_ref=0.015`) around first-order:
+      - `dt: 0.24 -> 0.12`: `p_l2=1.1264`, `p_linf=1.1306`
+      - `dt: 0.12 -> 0.06`: `p_l2=1.2360`, `p_linf=1.2381`
+- Updated `heat1d_realistic_predict` data protocol:
+  - `train.csv` / `infer.csv` now keep observed target `y` only (removed `y_true` column) to avoid clean-target leakage in main prediction flow.
+  - verified by rebuilding dataset and rerunning:
+    - `python ForgeFlowApps/heat1d_realistic_predict/scripts/build_dataset.py`
+    - `python main.py --config ForgeFlowApps/heat1d_realistic_predict/config/run.json`
+- v2 log freeze polish:
+  - updated:
+    - `ForgeFlowApps/heat1d_realistic_predict/LOG.md`
+  - changes:
+    - rewritten to a concise `v2 freeze` format consistent with `v1` style.
+    - added explicit phase closure and parallel next-step tracks (applied math + domain datasets).

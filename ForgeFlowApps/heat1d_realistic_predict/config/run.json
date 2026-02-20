@@ -1,0 +1,28 @@
+{
+  "mode": "supervised",
+  "task": "heat1d_realistic_predict",
+  "adapter_ref": "ForgeFlowApps.heat1d_realistic_predict.adapters.heat1d_realistic_adapter:Heat1DRealisticPredictAdapter",
+  "model": "linear_dynamics",
+  "paths": {
+    "train_csv": "ForgeFlowApps/heat1d_realistic_predict/data/processed/train.csv",
+    "infer_csv": "ForgeFlowApps/heat1d_realistic_predict/data/infer/infer.csv",
+    "predictions_csv": "ForgeFlowApps/heat1d_realistic_predict/output/predictions.csv",
+    "eval_report_csv": "ForgeFlowApps/heat1d_realistic_predict/output/eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": true,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 5000
+  },
+  "eval_policy": {
+    "val_mae_max": 0.25,
+    "val_rmse_max": 0.35,
+    "val_maxae_max": 4.0
+  }
+}

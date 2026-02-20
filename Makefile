@@ -35,8 +35,17 @@ HEAT_KAPPA_INFER_REPORT_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_invers
 HEAT_KAPPA_SCATTER_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/plot_kappa_scatter.py
 HEAT_KAPPA_SUMMARY_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/generate_summary_md.py
 HEAT_KAPPA_SIGMA_SWEEP_SCRIPT := ForgeFlowApps/heat_kappa_inverse/stage2_inverse/scripts/sweep_sigma_k.py
+USGS_WATER_TEMP_DATA_SCRIPT := ForgeFlowApps/usgs_water_temp/scripts/build_usgs_dataset.py
+USGS_WATER_TEMP_CONFIG := ForgeFlowApps/usgs_water_temp/config/run.json
+USGS_WATER_TEMP_TEMP_ONLY_CONFIG := ForgeFlowApps/usgs_water_temp/config/run_temp_only.json
+USGS_WATER_TEMP_FULL_FEATURES_CONFIG := ForgeFlowApps/usgs_water_temp/config/run_full_features.json
+USGS_WATER_TEMP_COMPARE_SCRIPT := ForgeFlowApps/usgs_water_temp/scripts/compare_feature_sets.py
+USGS_WATER_TEMP_MULTI_SITE_SCRIPT := ForgeFlowApps/usgs_water_temp/scripts/run_multi_site_eval.py
+HEAT1D_REALISTIC_BUILD_SCRIPT := ForgeFlowApps/heat1d_realistic_predict/scripts/build_dataset.py
+HEAT1D_REALISTIC_CONFIG := ForgeFlowApps/heat1d_realistic_predict/config/run.json
+HEAT1D_REALISTIC_CONVERGENCE_SCRIPT := ForgeFlowApps/heat1d_realistic_predict/scripts/run_convergence_study.py
 
-.PHONY: run-linear run-dem run-poly4 run-solar run-ink build-ink-samples build-ink-surrogate-data build-ink-multi-kappa-trajectories build-ink-multi-kappa-data run-ink-surrogate run-ink-surrogate-kappa-id run-ink-surrogate-kappa-ood run-ink-rollout plot-ink-report run-ink-convergence run-ink-spatial-convergence run-ink-verify run-heat-long run-heat-exact-convergence run-heat-exact-spatial-convergence build-heat-surrogate-data run-heat-surrogate run-heat-rollout plot-heat-report plot-heat-long build-heat-kappa-data run-heat-kappa-id run-heat-kappa-ood run-heat-kappa-id-noise-1 run-heat-kappa-id-noise-3 run-heat-kappa-ood-noise-1 run-heat-kappa-ood-noise-3 report-heat-kappa-infer plot-heat-kappa-scatter report-heat-kappa-summary report-heat-kappa-sigma-sweep run-heat-kappa-noise-sweep smoke
+.PHONY: run-linear run-dem run-poly4 run-solar run-ink build-ink-samples build-ink-surrogate-data build-ink-multi-kappa-trajectories build-ink-multi-kappa-data run-ink-surrogate run-ink-surrogate-kappa-id run-ink-surrogate-kappa-ood run-ink-rollout plot-ink-report run-ink-convergence run-ink-spatial-convergence run-ink-verify run-heat-long run-heat-exact-convergence run-heat-exact-spatial-convergence build-heat-surrogate-data run-heat-surrogate run-heat-rollout plot-heat-report plot-heat-long build-heat-kappa-data run-heat-kappa-id run-heat-kappa-ood run-heat-kappa-id-noise-1 run-heat-kappa-id-noise-3 run-heat-kappa-ood-noise-1 run-heat-kappa-ood-noise-3 report-heat-kappa-infer plot-heat-kappa-scatter report-heat-kappa-summary report-heat-kappa-sigma-sweep run-heat-kappa-noise-sweep build-usgs-water-temp-data run-usgs-water-temp run-usgs-water-temp-temp-only run-usgs-water-temp-full-features report-usgs-water-temp-ab run-usgs-water-temp-ab run-usgs-water-temp-multi-site build-heat1d-realistic-data run-heat1d-realistic run-heat1d-realistic-convergence smoke
 
 run-linear:
 	$(PYTHON) main.py --config $(LINEAR_CONFIG)
@@ -155,5 +164,37 @@ run-heat-kappa-noise-sweep:
 	$(PYTHON) $(HEAT_KAPPA_SCATTER_SCRIPT)
 	$(PYTHON) $(HEAT_KAPPA_SUMMARY_SCRIPT)
 	$(PYTHON) $(HEAT_KAPPA_SIGMA_SWEEP_SCRIPT)
+
+build-usgs-water-temp-data:
+	$(PYTHON) $(USGS_WATER_TEMP_DATA_SCRIPT)
+
+run-usgs-water-temp:
+	$(PYTHON) main.py --config $(USGS_WATER_TEMP_CONFIG)
+
+run-usgs-water-temp-temp-only:
+	$(PYTHON) main.py --config $(USGS_WATER_TEMP_TEMP_ONLY_CONFIG)
+
+run-usgs-water-temp-full-features:
+	$(PYTHON) main.py --config $(USGS_WATER_TEMP_FULL_FEATURES_CONFIG)
+
+report-usgs-water-temp-ab:
+	$(PYTHON) $(USGS_WATER_TEMP_COMPARE_SCRIPT)
+
+run-usgs-water-temp-ab:
+	$(PYTHON) main.py --config $(USGS_WATER_TEMP_TEMP_ONLY_CONFIG)
+	$(PYTHON) main.py --config $(USGS_WATER_TEMP_FULL_FEATURES_CONFIG)
+	$(PYTHON) $(USGS_WATER_TEMP_COMPARE_SCRIPT)
+
+run-usgs-water-temp-multi-site:
+	$(PYTHON) $(USGS_WATER_TEMP_MULTI_SITE_SCRIPT)
+
+build-heat1d-realistic-data:
+	$(PYTHON) $(HEAT1D_REALISTIC_BUILD_SCRIPT)
+
+run-heat1d-realistic:
+	$(PYTHON) main.py --config $(HEAT1D_REALISTIC_CONFIG)
+
+run-heat1d-realistic-convergence:
+	$(PYTHON) $(HEAT1D_REALISTIC_CONVERGENCE_SCRIPT)
 
 smoke: run-linear run-dem

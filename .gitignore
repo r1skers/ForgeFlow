@@ -63,3 +63,13 @@ ForgeFlowApps/heat_kappa_inverse/data/processed/infer_ood_noise_*.csv
 ForgeFlowApps/heat_kappa_inverse/output/*.png
 ForgeFlowApps/heat_kappa_inverse/output/summary.md
 ForgeFlowApps/heat_kappa_inverse/output/sigma_k_recommendation.md
+ForgeFlowApps/usgs_water_temp/data/processed/train.csv
+ForgeFlowApps/usgs_water_temp/data/infer/infer.csv
+ForgeFlowApps/usgs_water_temp/data/processed/train_USGS-*.csv
+ForgeFlowApps/usgs_water_temp/data/infer/infer_USGS-*.csv
+ForgeFlowApps/usgs_water_temp/output/multi_site/*.csv
+ForgeFlowApps/usgs_water_temp/output/multi_site/*.json
+ForgeFlowApps/heat1d_realistic_predict/data/processed/train.csv
+ForgeFlowApps/heat1d_realistic_predict/data/infer/infer.csv
+ForgeFlowApps/heat1d_realistic_predict/output/trajectory_*.csv
+ForgeFlowApps/heat1d_realistic_predict/output/manifest.json

@@ -1,0 +1,29 @@
+{
+  "mode": "supervised",
+  "task": "usgs_water_temp",
+  "adapter_ref": "ForgeFlowApps.usgs_water_temp.adapters.usgs_water_temp_adapter:USGSWaterTempAdapter",
+  "model": "linear_dynamics",
+  "paths": {
+    "train_csv": "ForgeFlowApps/usgs_water_temp/data/processed/train.csv",
+    "infer_csv": "ForgeFlowApps/usgs_water_temp/data/infer/infer.csv",
+    "predictions_csv": "ForgeFlowApps/usgs_water_temp/output/predictions.csv",
+    "eval_report_csv": "ForgeFlowApps/usgs_water_temp/output/eval_report.csv"
+  },
+  "split": {
+    "train_ratio": 0.8,
+    "shuffle": false,
+    "seed": 42
+  },
+  "anomaly": {
+    "sigma_k": 3.0
+  },
+  "infer": {
+    "chunk_size": 4096
+  },
+  "eval_policy": {
+    "val_mae_max": 2.0,
+    "val_rmse_max": 2.5,
+    "val_maxae_max": 6.0
+  }
+}
+
